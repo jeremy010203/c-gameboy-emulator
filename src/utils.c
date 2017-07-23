@@ -23,6 +23,12 @@ uint16_t read_word(void)
   return b2 | b1;
 }
 
+// Read a byte in memory without increment PC
+uint8_t peak_byte(void)
+{
+  return MMU.memory[r.PC.val];
+}
+
 void push_stack(uint16_t val)
 {
   MMU.memory[r.SP.val--] = (uint8_t)(val >> 8);
@@ -34,6 +40,14 @@ uint16_t pop_stack(void)
   uint8_t v1 = MMU.memory[++r.SP.val];
   uint16_t v2 = MMU.memory[++r.SP.val];
   return (v2 << 8) | v1;
+}
+
+void opcode_0xc1(void)
+{
+  r.BC.val = pop_stack();
+
+  clock.m = 1;
+  clock.t = 12;
 }
 
 void opcode_0xc5(void)
@@ -107,10 +121,11 @@ void loadhlma(void)
   clock.t = 8;
 }
 
-void jrnz(void)
+// JR NZ, r8
+void opcode_0x20(void)
 {
   int8_t addr = read_byte();
-  if (getZ())
+  if (!getZ())
   {
     r.PC.val += addr;
     clock.t = 12;
@@ -319,7 +334,7 @@ void opcode_0x80(void)
   (a + b > 255) ? setC() : resetC();
 
   r.AF.bytes.high += r.BC.bytes.high;
-  r.AF.bytes.high == 0 ? resetZ() : setZ();
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
   ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
@@ -327,33 +342,324 @@ void opcode_0x80(void)
   clock.t = 12;
 }
 
+// CP d8
+void opcode_0xfe(void)
+{
+  uint8_t val = read_byte();
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 2;
+  clock.t = 8;
+}
+
+// (a16) <- A
+void opcode_0xea(void)
+{
+  uint16_t val = read_word();
+  MMU.memory[val] = r.AF.bytes.high;
+
+  clock.m = 3;
+  clock.t = 16;
+}
+
+// A <- (a16)
+void opcode_0xfa(void)
+{
+  uint16_t val = read_word();
+  r.AF.bytes.high = MMU.memory[val];
+
+  clock.m = 3;
+  clock.t = 16;
+}
+
+// JR r8
+void opcode_0x18(void)
+{
+  int8_t addr = read_byte();
+  r.PC.val += addr;
+
+  clock.m = 2;
+  clock.t = 12;
+}
+
+// JR Z,r8
+void opcode_0x28(void)
+{
+  int8_t addr = read_byte();
+  if (getZ())
+  {
+    r.PC.val += addr;
+    clock.t = 12;
+  }
+  else
+  {
+    clock.t = 8;
+  }
+
+  clock.m = 2;
+}
+
+// JR C,r8
+void opcode_0x38(void)
+{
+  int8_t addr = read_byte();
+  if (getC())
+  {
+    r.PC.val += addr;
+    clock.t = 12;
+  }
+  else
+  {
+    clock.t = 8;
+  }
+
+  clock.m = 2;
+}
+
+// JR NC,r8
+void opcode_0x30(void)
+{
+  int8_t addr = read_byte();
+  if (!getC())
+  {
+    r.PC.val += addr;
+    clock.t = 12;
+  }
+  else
+  {
+    clock.t = 8;
+  }
+
+  clock.m = 2;
+}
+
+void opcode_0x17(void)
+{
+  uint8_t old_c = (r.AF.bytes.high & 0b10000000) >> 7;
+  uint8_t carry = getC();
+
+  r.AF.bytes.high = (r.AF.bytes.high << 1) + carry;
+  old_c == 1 ? setC() : resetC();
+
+  resetZ();
+  resetN();
+  resetH();
+
+  clock.m = 2;
+  clock.t = 8;
+}
+
+void opcode_0x0d(void)
+{
+  if (r.BC.bytes.low == 0)
+    setH();
+
+  r.BC.bytes.low--;
+  r.BC.bytes.low == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x1d(void)
+{
+  if (r.DE.bytes.low == 0)
+    setH();
+
+  r.DE.bytes.low--;
+  r.DE.bytes.low == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x2d(void)
+{
+  if (r.HL.bytes.low == 0)
+    setH();
+
+  r.HL.bytes.low--;
+  r.HL.bytes.low == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x3d(void)
+{
+  if (r.AF.bytes.high == 0)
+    setH();
+
+  r.AF.bytes.high--;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// DEC B
+void opcode_0x05(void)
+{
+  if (r.BC.bytes.high == 0)
+    setH();
+
+  r.BC.bytes.high--;
+  r.BC.bytes.high == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x15(void)
+{
+  if (r.DE.bytes.high == 0)
+    setH();
+
+  r.DE.bytes.high--;
+  r.DE.bytes.high == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x25(void)
+{
+  if (r.HL.bytes.high == 0)
+    setH();
+
+  r.HL.bytes.high--;
+  r.HL.bytes.high == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x35(void)
+{
+  uint8_t hl = MMU.memory[r.HL.val];
+  if (hl == 0)
+    setH();
+
+  MMU.memory[r.HL.val]--;
+  MMU.memory[r.HL.val] == 0 ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+void opcode_0x03(void)
+{
+  r.BC.val++;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x13(void)
+{
+  r.DE.val++;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x23(void)
+{
+  r.HL.val++;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x33(void)
+{
+  r.SP.val++;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// RET
+void opcode_0xc9(void)
+{
+  r.PC.val = pop_stack();
+
+  clock.m = 1;
+  clock.t = 16;
+}
+
+void prefix_0x11(void)
+{
+  uint8_t old_c = (r.BC.bytes.low & 0b10000000) >> 7;
+  uint8_t carry = getC();
+
+  r.BC.bytes.low = (r.BC.bytes.low << 1) + carry;
+  r.BC.bytes.low == 0 ? setZ() : resetZ();
+  old_c == 1 ? setC() : resetC();
+
+  resetN();
+  resetH();
+
+  clock.m = 2;
+  clock.t = 8;
+}
+
 void load_opcodes(void)
 {
   Opcodes[0x00] = &nop;
+  Opcodes[0x03] = &opcode_0x03;
+  Opcodes[0x05] = &opcode_0x05;
   Opcodes[0x06] = &opcode_0x06;
   Opcodes[0x0a] = &opcode_0x0a;
   Opcodes[0x0b] = &opcode_0x0b;
   Opcodes[0x0c] = &opcode_0x0c;
+  Opcodes[0x0d] = &opcode_0x0d;
   Opcodes[0x0e] = &loadcd8;
 
   Opcodes[0x11] = &opcode_0x11;
+  Opcodes[0x13] = &opcode_0x13;
+  Opcodes[0x15] = &opcode_0x15;
   Opcodes[0x16] = &opcode_0x16;
+  Opcodes[0x17] = &opcode_0x17;
+  Opcodes[0x18] = &opcode_0x18;
   Opcodes[0x1a] = &opcode_0x1a;
   Opcodes[0x1b] = &opcode_0x1b;
+  Opcodes[0x1d] = &opcode_0x1d;
   Opcodes[0x1e] = &loaded8;
 
-  Opcodes[0x20] = &jrnz;
+  Opcodes[0x20] = &opcode_0x20;
   Opcodes[0x21] = &opcode_0x21;
   Opcodes[0x22] = &loadhlpa;
+  Opcodes[0x23] = &opcode_0x23;
+  Opcodes[0x25] = &opcode_0x25;
   Opcodes[0x26] = &opcode_0x26;
+  Opcodes[0x28] = &opcode_0x28;
   Opcodes[0x2a] = &opcode_0x2a;
   Opcodes[0x2b] = &opcode_0x2b;
+  Opcodes[0x2d] = &opcode_0x2d;
   Opcodes[0x2e] = &loadld8;
 
+  Opcodes[0x30] = &opcode_0x30;
   Opcodes[0x31] = &opcode_0x31;
   Opcodes[0x32] = &loadhlma;
+  Opcodes[0x33] = &opcode_0x33;
+  Opcodes[0x35] = &opcode_0x35;
+  Opcodes[0x38] = &opcode_0x38;
   Opcodes[0x3a] = &opcode_0x3a;
   Opcodes[0x3b] = &opcode_0x3b;
+  Opcodes[0x3d] = &opcode_0x3d;
   Opcodes[0x3e] = &loadad8;
 
   Opcodes[0x40] = &loadbb;
@@ -416,7 +722,9 @@ void load_opcodes(void)
 
   Opcodes[0xAF] = &xora;
 
+  Opcodes[0xC1] = &opcode_0xc1;
   Opcodes[0xC5] = &opcode_0xc5;
+  Opcodes[0xC9] = &opcode_0xc9;
   Opcodes[0xCB] = &prefixcb;
   Opcodes[0xCD] = &opcode_0xcd;
 
@@ -425,12 +733,16 @@ void load_opcodes(void)
   Opcodes[0xE0] = &opcode_0xe0;
   Opcodes[0xE2] = &opcode_0xe2;
   Opcodes[0xE5] = &opcode_0xe5;
+  Opcodes[0xEA] = &opcode_0xea;
 
   Opcodes[0xF5] = &opcode_0xf5;
+  Opcodes[0xFA] = &opcode_0xfa;
+  Opcodes[0xFE] = &opcode_0xfe;
 }
 
 void load_prefixcb(void)
 {
+  PrefixCB[0x11] = &prefix_0x11;
   PrefixCB[0x7C] = &bit7h;
 }
 
@@ -438,7 +750,7 @@ void execute(uint16_t op)
 {
   if (!Opcodes[op])
   {
-    fprintf(stderr, "Unknown Op: %x", op);
+    fprintf(stderr, "Unknown Op %x at address %x", op, r.PC.val - 1);
     exit(1);
   }
   Opcodes[op]();

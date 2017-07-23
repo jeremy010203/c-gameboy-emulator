@@ -1,16 +1,20 @@
 SOURCE_DIR=src
 HEADER_DIR=headers
+SDL_DIR=/Library/Frameworks/SDL2.framework
 
 SOURCE_FILES= \
 $(SOURCE_DIR)/main.c \
 $(SOURCE_DIR)/registers.c \
 $(SOURCE_DIR)/mmu.c \
-$(SOURCE_DIR)/utils.c
+$(SOURCE_DIR)/utils.c \
+$(SOURCE_DIR)/vram.c
 
 all:
-	gcc -g -I$(HEADER_DIR) $(SOURCE_FILES) -o main
+	gcc -g -I$(HEADER_DIR) $(SOURCE_FILES) -lSDL2 -o main
 
 clean:
 	$(RM) main
 	$(RM) *~
 	$(RM) src/*~
+	$(RM) -r .DS_STORE
+	$(RM) -r *.dSYM
