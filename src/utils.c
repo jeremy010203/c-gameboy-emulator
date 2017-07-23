@@ -23,6 +23,17 @@ uint16_t read_word(void)
   return b1 | b2;
 }
 
+void opcode_0xcd(void)
+{
+  uint16_t addr = read_word();
+  MMU.memory[r.SP.val--] = r.PC.bytes.high;
+  MMU.memory[r.SP.val--] = r.PC.bytes.low;
+  r.PC.val = addr;
+
+  clock.m = 3;
+  clock.t = 24;
+}
+
 void prefixcb(void)
 {
     uint8_t op = read_byte();
@@ -32,22 +43,6 @@ void prefixcb(void)
       exit(1);
     }
     PrefixCB[op]();
-}
-
-void loadspd16(void)
-{
-  r.SP.val = read_word();
-
-  clock.m = 3;
-  clock.t = 12;
-}
-
-void loadhld16(void)
-{
-  r.HL.val = read_word();
-
-  clock.m = 3;
-  clock.t = 12;
 }
 
 void loadhlpa(void)
@@ -139,21 +134,147 @@ void opcode_0x0c(void)
   clock.t = 4;
 }
 
+void opcode_0x77(void)
+{
+  MMU.memory[r.HL.val] = r.AF.bytes.high;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0xe0(void)
+{
+  uint16_t addr = 0xFF00 + read_byte();
+  MMU.memory[addr] = r.AF.bytes.high;
+
+  clock.m = 2;
+  clock.t = 12;
+}
+
+void opcode_0x01(void)
+{
+  r.BC.val = read_word();
+
+  clock.m = 3;
+  clock.t = 12;
+}
+
+void opcode_0x11(void)
+{
+  r.DE.val = read_word();
+
+  clock.m = 3;
+  clock.t = 12;
+}
+
+void opcode_0x0a(void)
+{
+  r.AF.bytes.high = MMU.memory[r.BC.val];
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x1a(void)
+{
+  r.AF.bytes.high = MMU.memory[r.DE.val];
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x2a(void)
+{
+  r.AF.bytes.high = MMU.memory[r.HL.val];
+  r.HL.val++;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x0b(void)
+{
+  r.BC.val--;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x1b(void)
+{
+  r.DE.val--;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x2b(void)
+{
+  r.HL.val--;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x3b(void)
+{
+  r.SP.val--;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x3a(void)
+{
+  r.AF.bytes.high = MMU.memory[r.HL.val];
+  r.HL.val--;
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+void opcode_0x21(void)
+{
+  r.HL.val = read_word();
+
+  clock.m = 3;
+  clock.t = 12;
+}
+
+void opcode_0x31(void)
+{
+  r.SP.val = read_word();
+
+  clock.m = 3;
+  clock.t = 12;
+}
+
 void load_opcodes(void)
 {
   Opcodes[0x00] = &nop;
 
+  Opcodes[0x0a] = &opcode_0x0a;
+  Opcodes[0x0b] = &opcode_0x0b;
   Opcodes[0x0c] = &opcode_0x0c;
   Opcodes[0x0e] = &loadcd8;
+
+  Opcodes[0x11] = &opcode_0x11;
+  Opcodes[0x1a] = &opcode_0x1a;
+  Opcodes[0x1b] = &opcode_0x1b;
   Opcodes[0x1e] = &loaded8;
-  Opcodes[0x2e] = &loadld8;
-  Opcodes[0x3e] = &loadad8;
 
   Opcodes[0x20] = &jrnz;
-  Opcodes[0x21] = &loadhld16;
+  Opcodes[0x21] = &opcode_0x21;
   Opcodes[0x22] = &loadhlpa;
-  Opcodes[0x31] = &loadspd16;
+  Opcodes[0x2a] = &opcode_0x2a;
+  Opcodes[0x2b] = &opcode_0x2b;
+  Opcodes[0x2e] = &loadld8;
+
+  Opcodes[0x31] = &opcode_0x31;
   Opcodes[0x32] = &loadhlma;
+  Opcodes[0x3a] = &opcode_0x3a;
+  Opcodes[0x3b] = &opcode_0x3b;
+  Opcodes[0x3e] = &loadad8;
 
   Opcodes[0x40] = &loadbb;
   Opcodes[0x41] = &loadbc;
@@ -162,7 +283,6 @@ void load_opcodes(void)
   Opcodes[0x44] = &loadbh;
   Opcodes[0x45] = &loadbl;
   Opcodes[0x47] = &loadba;
-
   Opcodes[0x48] = &loadcb;
   Opcodes[0x49] = &loadcc;
   Opcodes[0x4A] = &loadcd;
@@ -203,6 +323,7 @@ void load_opcodes(void)
   Opcodes[0x6D] = &loadll;
   Opcodes[0x6F] = &loadla;
 
+  Opcodes[0x77] = &opcode_0x77;
   Opcodes[0x78] = &loadab;
   Opcodes[0x79] = &loadac;
   Opcodes[0x7A] = &loadad;
@@ -213,6 +334,8 @@ void load_opcodes(void)
 
   Opcodes[0xAF] = &xora;
   Opcodes[0xCB] = &prefixcb;
+  Opcodes[0xCD] = &opcode_0xcd;
+  Opcodes[0xE0] = &opcode_0xe0;
   Opcodes[0xE2] = &opcode_0xe2;
 }
 

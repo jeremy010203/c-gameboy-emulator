@@ -14,7 +14,7 @@ int main(void)
     uint8_t op = read_byte();
     printf("%x\n", op);
     execute(op);
-    print_r();
+    //print_r();
   }
 
   return 0;

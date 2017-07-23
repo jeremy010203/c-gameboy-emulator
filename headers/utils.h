@@ -56,7 +56,10 @@ void execute(uint16_t op);
 
 void loadhlpa(void);
 void loadhlma(void);
-void loadhld16(void);
+void opcode_0x01(void);
+void opcode_0x11(void);
+void opcode_0x21(void);
+void opcode_0x31(void);
 void loadspd16(void);
 void prefixcb(void);
 void jrnz(void);
