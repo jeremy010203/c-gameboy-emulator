@@ -22,3 +22,11 @@ static void load_bios(char *path)
   fread(&MMU.memory, len, 1, file);
   fclose(file);
 }
+
+void print_memory(uint16_t from, uint16_t to)
+{
+  for (uint16_t i = from; i <=to; i++)
+  {
+    printf("%x - %x\n", i, MMU.memory[i]);
+  }
+}
