@@ -15,6 +15,7 @@ all:
 clean:
 	$(RM) main
 	$(RM) *~
+	$(RM) *#
 	$(RM) src/*~
 	$(RM) -r .DS_STORE
 	$(RM) -r *.dSYM

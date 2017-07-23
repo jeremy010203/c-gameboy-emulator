@@ -6,6 +6,7 @@
 
 extern Mmu MMU;
 extern Registers r;
+extern Clock clock;
 extern void (*Opcodes[0xFF]) (void);
 
 enum Op

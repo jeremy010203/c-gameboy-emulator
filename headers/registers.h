@@ -31,6 +31,8 @@ typedef struct clock
 {
   uint16_t m;
   uint16_t t;
+  uint16_t total_m;
+  uint16_t total_t;
 } Clock;
 
 Clock clock;
