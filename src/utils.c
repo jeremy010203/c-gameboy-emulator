@@ -872,6 +872,49 @@ void execute(uint16_t op)
     exit(1);
   }
   Opcodes[op]();
+
   clock.total_m += clock.m;
-  clock.total_m += clock.t;
+  clock.total_t += clock.t;
+  clock.lineticks += clock.m;
+  switch (clock.mode)
+  {
+    case 0:
+      if (clock.lineticks > 203)
+      {
+        if (clock.total_m >= 70224)
+        {
+          clock.mode = 1;
+          clock.total_m  = 0;
+        }
+        else
+        {
+          clock.mode = 2;
+        }
+        clock.lineticks = 0;
+        MMU.memory[0xFF44]++;
+      }
+      break;
+    case 1:
+      if (clock.lineticks >= 4560)
+      {
+        clock.mode = 2;
+        clock.lineticks = 0;
+        MMU.memory[0xFF44] = 0;
+      }
+      break;
+    case 2:
+      if (clock.lineticks > 80)
+      {
+        clock.mode = 3;
+        clock.lineticks = 0;
+      }
+      break;
+    case 3:
+      if (clock.lineticks > 172)
+      {
+        clock.mode = 0;
+        clock.lineticks = 0;
+      }
+      break;
+  }
 }

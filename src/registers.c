@@ -8,6 +8,10 @@ void init_registers()
   r.HL.val = 0;
   r.SP.val = 0;
   r.PC.val = 0;
+  clock.total_m = 0;
+  clock.total_t = 0;
+  clock.lineticks = 0;
+  clock.mode = 2;
 }
 
 void print_r()
