@@ -573,6 +573,118 @@ void opcode_0xfe(void)
   clock.t = 8;
 }
 
+// CP B
+void opcode_0xb8(void)
+{
+  uint8_t val = r.BC.bytes.high;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP C
+void opcode_0xb9(void)
+{
+  uint8_t val = r.BC.bytes.low;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP D
+void opcode_0xba(void)
+{
+  uint8_t val = r.DE.bytes.high;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP E
+void opcode_0xbb(void)
+{
+  uint8_t val = r.DE.bytes.low;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP H
+void opcode_0xbc(void)
+{
+  uint8_t val = r.HL.bytes.high;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP L
+void opcode_0xbd(void)
+{
+  uint8_t val = r.HL.bytes.low;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP (HL)
+void opcode_0xbe(void)
+{
+  uint8_t val = MMU.memory[r.HL.val];
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// CP A
+void opcode_0xbf(void)
+{
+  uint8_t val = r.AF.bytes.high;
+
+  (val > r.AF.bytes.high) ? setC() : resetC();
+  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
+  r.AF.bytes.high == val ? setZ() : resetZ();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
 // (a16) <- A
 void opcode_0xea(void)
 {
@@ -974,6 +1086,15 @@ void load_opcodes(void)
   Opcodes[0x97] = &opcode_0x97;
 
   Opcodes[0xAF] = &xora;
+
+  Opcodes[0xB8] = &opcode_0xb8;
+  Opcodes[0xB9] = &opcode_0xb9;
+  Opcodes[0xBA] = &opcode_0xba;
+  Opcodes[0xBB] = &opcode_0xbb;
+  Opcodes[0xBC] = &opcode_0xbc;
+  Opcodes[0xBD] = &opcode_0xbd;
+  Opcodes[0xBE] = &opcode_0xbe;
+  Opcodes[0xBF] = &opcode_0xbf;
 
   Opcodes[0xC1] = &opcode_0xc1;
   Opcodes[0xC5] = &opcode_0xc5;
