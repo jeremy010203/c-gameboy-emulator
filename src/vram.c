@@ -2,6 +2,8 @@
 
 static void print_tile(SDL_Renderer *renderer, uint16_t addr, int x, int y)
 {
+  SDL_Point points[64];
+  int k = 0;
   for (uint16_t i = 0; i < 8; i++)
   {
     uint16_t l1 = addr + (i * 2);
@@ -12,9 +14,15 @@ static void print_tile(SDL_Renderer *renderer, uint16_t addr, int x, int y)
       uint8_t d = 1 << (7 - j);
       uint8_t val = ((MMU.memory[l1] & d) ? 1 : 0) + ((MMU.memory[l2] & d) ? 2 : 0);
       if (val > 0)
-        SDL_RenderDrawPoint(renderer, x + j, y + i);
+      {
+        points[k].x = x + j;
+        points[k].y = y + i;
+        k++;
+        //SDL_RenderDrawPoint(renderer, x + j, y + i);
+      }
     }
   }
+  SDL_RenderDrawPoints(renderer, &points[0], k);
 }
 
 void print_tiles(SDL_Renderer *renderer)
@@ -28,5 +36,6 @@ void print_tiles(SDL_Renderer *renderer)
     i++;
   }
 
+  SDL_RenderSetScale(renderer, 2, 2);
   SDL_RenderPresent(renderer);
 }

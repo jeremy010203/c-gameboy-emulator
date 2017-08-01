@@ -25,6 +25,8 @@ typedef struct Registers
 
   Register SP;
   Register PC;
+  uint8_t ime;
+  uint8_t joypad;
 } Registers;
 
 typedef struct my_clock
@@ -44,8 +46,7 @@ Registers r;
 
 void init_registers(void);
 void print_r(void);
-static void load(uint8_t* to, uint8_t* from);
-static int test_bit(uint8_t byte, uint8_t index);
+int test_bit(uint8_t byte, uint8_t index);
 
 void setZ(void);
 void resetZ(void);

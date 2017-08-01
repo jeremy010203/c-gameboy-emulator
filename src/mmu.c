@@ -10,7 +10,7 @@ void init_mmu(char *path)
   load_bios(path);
 }
 
-static void load_bios(char *path)
+void load_bios(char *path)
 {
   FILE *file;
   unsigned long len;

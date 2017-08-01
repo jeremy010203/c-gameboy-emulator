@@ -8,6 +8,8 @@ void init_registers()
   r.HL.val = 0;
   r.SP.val = 0;
   r.PC.val = 0;
+  r.ime = 1;
+  r.joypad = 0;
   my_clock.total_m = 0;
   my_clock.total_t = 0;
   my_clock.lineticks = 0;
@@ -345,7 +347,7 @@ void loadal()
 }
 
 // Test if but = 1 with index: 7 6 5 4 3 2 1 0
-static int test_bit(uint8_t byte, uint8_t index)
+int test_bit(uint8_t byte, uint8_t index)
 {
     return (byte & (1 << index)) != 0;
 }
@@ -364,7 +366,6 @@ void bit7h(void)
 
 void nop()
 {
-  r.PC.val++;
   my_clock.m = 1;
   my_clock.t = 4;
 }
