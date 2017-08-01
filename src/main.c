@@ -1,6 +1,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <time.h>
+#include <sys/time.h>
 #include "utils.h"
 #include "vram.h"
 #include <SDL2/SDL.h>
@@ -19,18 +21,20 @@ int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
 
 void debug_mode(SDL_Renderer *renderer)
 {
+  struct timeval start, end;
+  struct timespec ts;
+  gettimeofday(&start, NULL);
 
   int16_t breakpoints[100];
   for (int i = 0; i < 100; i++)
     breakpoints[i] = -1;
 
+  int frame = 0;
   while (1)
   {
-    print_tiles(renderer);
-
     char input[10];
     printf("0x%x(0x%x)> ", r.PC.val, peak_byte());
-    fgets(input, 10, stdin);
+    fgets(input, 100, stdin);
 
     if (strcmp(input, "r\n") == 0)
     {
@@ -38,6 +42,17 @@ void debug_mode(SDL_Renderer *renderer)
       {
         uint8_t op = read_byte();
         execute(op);
+        if (renderer && MMU.memory[0xFF44] == 0)
+        {
+          frame++;
+          if (frame % 60 == 0)
+          {
+            SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+            SDL_RenderClear(renderer);
+            print_tiles(renderer);
+            frame = 0;
+          }
+        }
         if (is_breakpoint(breakpoints, r.PC.val))
         {
           printf("Breakpoint reached.\n");
@@ -51,10 +66,28 @@ void debug_mode(SDL_Renderer *renderer)
       uint8_t op = read_byte();
       printf("%x\n", op);
       execute(op);
+      if (renderer && MMU.memory[0xFF44] == 0)
+      {
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderClear(renderer);
+        print_tiles(renderer);
+      }
     }
     else if (strcmp(input, "show reg\n") == 0)
     {
       print_r();
+    }
+    else if (strcmp(input, "show tilemap\n") == 0)
+    {
+      int i = 0;
+      for (uint16_t j = 0x9800; j <= 0x9BFF; j++)
+      {
+        printf("%2x ", MMU.memory[j]);
+        i++;
+        if (i % 32 == 0)
+          printf("\n");
+      }
+      printf("\n");
     }
     else if (input[0] == 'b' && input[1] == ' ')
     {
@@ -120,7 +153,7 @@ int main(int argc, char *args[])
 
   if (sdl)
   {
-    SDL_CreateWindowAndRenderer(256, 256, 0, &pWindow, &renderer);
+    SDL_CreateWindowAndRenderer(160, 144, 0, &pWindow, &renderer);
 
     if (!pWindow)
     {
@@ -128,6 +161,7 @@ int main(int argc, char *args[])
     }
     else
     {
+      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
       SDL_RenderClear(renderer);
     }
   }

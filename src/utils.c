@@ -46,40 +46,40 @@ void opcode_0xc1(void)
 {
   r.BC.val = pop_stack();
 
-  clock.m = 1;
-  clock.t = 12;
+  my_clock.m = 1;
+  my_clock.t = 12;
 }
 
 void opcode_0xc5(void)
 {
   push_stack(r.BC.val);
 
-  clock.m = 1;
-  clock.t = 16;
+  my_clock.m = 1;
+  my_clock.t = 16;
 }
 
 void opcode_0xd5(void)
 {
   push_stack(r.DE.val);
 
-  clock.m = 1;
-  clock.t = 16;
+  my_clock.m = 1;
+  my_clock.t = 16;
 }
 
 void opcode_0xe5(void)
 {
   push_stack(r.HL.val);
 
-  clock.m = 1;
-  clock.t = 16;
+  my_clock.m = 1;
+  my_clock.t = 16;
 }
 
 void opcode_0xf5(void)
 {
   push_stack(r.AF.val);
 
-  clock.m = 1;
-  clock.t = 16;
+  my_clock.m = 1;
+  my_clock.t = 16;
 }
 
 void opcode_0xcd(void)
@@ -88,8 +88,8 @@ void opcode_0xcd(void)
   push_stack(r.PC.val);
   r.PC.val = addr;
 
-  clock.m = 3;
-  clock.t = 24;
+  my_clock.m = 3;
+  my_clock.t = 24;
 }
 
 void prefixcb(void)
@@ -108,8 +108,8 @@ void loadhlpa(void)
   MMU.memory[r.HL.val] = r.AF.bytes.high;
   r.HL.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void loadhlma(void)
@@ -117,8 +117,8 @@ void loadhlma(void)
   MMU.memory[r.HL.val] = r.AF.bytes.high;
   r.HL.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // JR NZ, r8
@@ -128,42 +128,42 @@ void opcode_0x20(void)
   if (!getZ())
   {
     r.PC.val += addr;
-    clock.t = 12;
+    my_clock.t = 12;
   }
   else
   {
-    clock.t = 8;
+    my_clock.t = 8;
   }
 
-  clock.m = 2;
+  my_clock.m = 2;
 }
 
 void loadcd8(void)
 {
   r.BC.bytes.low = read_byte();
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void loaded8(void)
 {
   r.DE.bytes.low = read_byte();
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void loadld8(void)
 {
   r.HL.bytes.low = read_byte();
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void loadad8(void)
 {
   r.AF.bytes.high = read_byte();
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void opcode_0xe2(void)
@@ -171,8 +171,8 @@ void opcode_0xe2(void)
   uint16_t pos = 0xFF00 + r.BC.bytes.low;
   MMU.memory[pos] = r.AF.bytes.high;
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 // INC C
@@ -185,8 +185,8 @@ void opcode_0x0c(void)
   ((r.BC.bytes.low ^ 0x01 ^ c) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC E
@@ -199,8 +199,8 @@ void opcode_0x1c(void)
   ((r.DE.bytes.low ^ 0x01 ^ e) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC L
@@ -213,8 +213,8 @@ void opcode_0x2c(void)
   ((r.HL.bytes.low ^ 0x01 ^ l) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC A
@@ -227,8 +227,8 @@ void opcode_0x3c(void)
   ((r.AF.bytes.high ^ 0x01 ^ a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC B
@@ -241,8 +241,8 @@ void opcode_0x04(void)
   ((r.BC.bytes.high ^ 0x01 ^ b) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC D
@@ -255,8 +255,8 @@ void opcode_0x14(void)
   ((r.DE.bytes.high ^ 0x01 ^ d) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC H
@@ -269,8 +269,8 @@ void opcode_0x24(void)
   ((r.HL.bytes.high ^ 0x01 ^ h) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // INC (HL)
@@ -283,48 +283,48 @@ void opcode_0x34(void)
   ((MMU.memory[r.HL.bytes.high] ^ 0x01 ^ hl) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 12;
+  my_clock.m = 1;
+  my_clock.t = 12;
 }
 
 void opcode_0x77(void)
 {
   MMU.memory[r.HL.val] = r.AF.bytes.high;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x01(void)
 {
   r.BC.val = read_word();
 
-  clock.m = 3;
-  clock.t = 12;
+  my_clock.m = 3;
+  my_clock.t = 12;
 }
 
 void opcode_0x11(void)
 {
   r.DE.val = read_word();
 
-  clock.m = 3;
-  clock.t = 12;
+  my_clock.m = 3;
+  my_clock.t = 12;
 }
 
 void opcode_0x0a(void)
 {
   r.AF.bytes.high = MMU.memory[r.BC.val];
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x1a(void)
 {
   r.AF.bytes.high = MMU.memory[r.DE.val];
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x2a(void)
@@ -332,40 +332,40 @@ void opcode_0x2a(void)
   r.AF.bytes.high = MMU.memory[r.HL.val];
   r.HL.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x0b(void)
 {
   r.BC.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x1b(void)
 {
   r.DE.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x2b(void)
 {
   r.HL.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x3b(void)
 {
   r.SP.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x3a(void)
@@ -373,48 +373,48 @@ void opcode_0x3a(void)
   r.AF.bytes.high = MMU.memory[r.HL.val];
   r.HL.val--;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x21(void)
 {
   r.HL.val = read_word();
 
-  clock.m = 3;
-  clock.t = 12;
+  my_clock.m = 3;
+  my_clock.t = 12;
 }
 
 void opcode_0x31(void)
 {
   r.SP.val = read_word();
 
-  clock.m = 3;
-  clock.t = 12;
+  my_clock.m = 3;
+  my_clock.t = 12;
 }
 
 void opcode_0x06(void)
 {
   r.BC.bytes.high = read_byte();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void opcode_0x16(void)
 {
   r.DE.bytes.high = read_byte();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void opcode_0x26(void)
 {
   r.HL.bytes.high = read_byte();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 // ADD A,B
@@ -429,8 +429,8 @@ void opcode_0x80(void)
   ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,C
@@ -445,8 +445,8 @@ void opcode_0x81(void)
   ((r.AF.bytes.high ^ r.BC.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,D
@@ -461,8 +461,8 @@ void opcode_0x82(void)
   ((r.AF.bytes.high ^ r.DE.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,E
@@ -477,8 +477,8 @@ void opcode_0x83(void)
   ((r.AF.bytes.high ^ r.DE.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,H
@@ -493,8 +493,8 @@ void opcode_0x84(void)
   ((r.AF.bytes.high ^ r.HL.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,L
@@ -509,8 +509,8 @@ void opcode_0x85(void)
   ((r.AF.bytes.high ^ r.HL.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // ADD A,(HL)
@@ -525,8 +525,8 @@ void opcode_0x86(void)
   ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // ADD A,A
@@ -540,8 +540,8 @@ void opcode_0x87(void)
   ((r.AF.bytes.high ^ r.AF.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB B
@@ -556,8 +556,8 @@ void opcode_0x90(void)
   ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB C
@@ -572,8 +572,8 @@ void opcode_0x91(void)
   ((r.AF.bytes.high ^ r.BC.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB D
@@ -588,8 +588,8 @@ void opcode_0x92(void)
   ((r.AF.bytes.high ^ r.DE.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB E
@@ -604,8 +604,8 @@ void opcode_0x93(void)
   ((r.AF.bytes.high ^ r.DE.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB H
@@ -620,8 +620,8 @@ void opcode_0x94(void)
   ((r.AF.bytes.high ^ r.HL.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB L
@@ -636,8 +636,8 @@ void opcode_0x95(void)
   ((r.AF.bytes.high ^ r.HL.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // SUB (HL)
@@ -652,8 +652,8 @@ void opcode_0x96(void)
   ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // SUB A
@@ -667,8 +667,8 @@ void opcode_0x97(void)
   ((r.AF.bytes.high ^ r.AF.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // CP d8
@@ -681,8 +681,8 @@ void opcode_0xfe(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 // CP B
@@ -695,8 +695,8 @@ void opcode_0xb8(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP C
@@ -709,8 +709,8 @@ void opcode_0xb9(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP D
@@ -723,8 +723,8 @@ void opcode_0xba(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP E
@@ -737,8 +737,8 @@ void opcode_0xbb(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP H
@@ -751,8 +751,8 @@ void opcode_0xbc(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP L
@@ -765,8 +765,8 @@ void opcode_0xbd(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP (HL)
@@ -779,8 +779,8 @@ void opcode_0xbe(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // CP A
@@ -793,8 +793,8 @@ void opcode_0xbf(void)
   r.AF.bytes.high == val ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // (a16) <- A
@@ -803,8 +803,8 @@ void opcode_0xea(void)
   uint16_t val = read_word();
   MMU.memory[val] = r.AF.bytes.high;
 
-  clock.m = 3;
-  clock.t = 16;
+  my_clock.m = 3;
+  my_clock.t = 16;
 }
 
 // A <- (a16)
@@ -813,8 +813,8 @@ void opcode_0xfa(void)
   uint16_t val = read_word();
   r.AF.bytes.high = MMU.memory[val];
 
-  clock.m = 3;
-  clock.t = 16;
+  my_clock.m = 3;
+  my_clock.t = 16;
 }
 
 // JR r8
@@ -823,8 +823,8 @@ void opcode_0x18(void)
   int8_t addr = read_byte();
   r.PC.val += addr;
 
-  clock.m = 2;
-  clock.t = 12;
+  my_clock.m = 2;
+  my_clock.t = 12;
 }
 
 // JR Z,r8
@@ -834,14 +834,14 @@ void opcode_0x28(void)
   if (getZ())
   {
     r.PC.val += addr;
-    clock.t = 12;
+    my_clock.t = 12;
   }
   else
   {
-    clock.t = 8;
+    my_clock.t = 8;
   }
 
-  clock.m = 2;
+  my_clock.m = 2;
 }
 
 // JR C,r8
@@ -851,14 +851,14 @@ void opcode_0x38(void)
   if (getC())
   {
     r.PC.val += addr;
-    clock.t = 12;
+    my_clock.t = 12;
   }
   else
   {
-    clock.t = 8;
+    my_clock.t = 8;
   }
 
-  clock.m = 2;
+  my_clock.m = 2;
 }
 
 // JR NC,r8
@@ -868,14 +868,14 @@ void opcode_0x30(void)
   if (!getC())
   {
     r.PC.val += addr;
-    clock.t = 12;
+    my_clock.t = 12;
   }
   else
   {
-    clock.t = 8;
+    my_clock.t = 8;
   }
 
-  clock.m = 2;
+  my_clock.m = 2;
 }
 
 void opcode_0x17(void)
@@ -890,8 +890,8 @@ void opcode_0x17(void)
   resetN();
   resetH();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void opcode_0x0d(void)
@@ -903,8 +903,8 @@ void opcode_0x0d(void)
   r.BC.bytes.low == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x1d(void)
@@ -916,8 +916,8 @@ void opcode_0x1d(void)
   r.DE.bytes.low == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x2d(void)
@@ -929,8 +929,8 @@ void opcode_0x2d(void)
   r.HL.bytes.low == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x3d(void)
@@ -942,8 +942,8 @@ void opcode_0x3d(void)
   r.AF.bytes.high == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 // DEC B
@@ -956,8 +956,8 @@ void opcode_0x05(void)
   r.BC.bytes.high == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x15(void)
@@ -969,8 +969,8 @@ void opcode_0x15(void)
   r.DE.bytes.high == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x25(void)
@@ -982,8 +982,8 @@ void opcode_0x25(void)
   r.HL.bytes.high == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x35(void)
@@ -996,40 +996,40 @@ void opcode_0x35(void)
   MMU.memory[r.HL.val] == 0 ? setZ() : resetZ();
   setN();
 
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void opcode_0x03(void)
 {
   r.BC.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x13(void)
 {
   r.DE.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x23(void)
 {
   r.HL.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 void opcode_0x33(void)
 {
   r.SP.val++;
 
-  clock.m = 1;
-  clock.t = 8;
+  my_clock.m = 1;
+  my_clock.t = 8;
 }
 
 // RET
@@ -1037,8 +1037,8 @@ void opcode_0xc9(void)
 {
   r.PC.val = pop_stack();
 
-  clock.m = 1;
-  clock.t = 16;
+  my_clock.m = 1;
+  my_clock.t = 16;
 }
 
 // LDH (a8), A
@@ -1047,8 +1047,8 @@ void opcode_0xe0(void)
   uint16_t addr = 0xFF00 + read_byte();
   MMU.memory[addr] = r.AF.bytes.high;
 
-  clock.m = 2;
-  clock.t = 12;
+  my_clock.m = 2;
+  my_clock.t = 12;
 }
 
 // LDH A, (a8)
@@ -1057,8 +1057,8 @@ void opcode_0xf0(void)
   uint16_t addr = 0xFF00 + read_byte();
   r.AF.bytes.high = MMU.memory[addr];
 
-  clock.m = 2;
-  clock.t = 12;
+  my_clock.m = 2;
+  my_clock.t = 12;
 }
 
 void prefix_0x11(void)
@@ -1073,8 +1073,8 @@ void prefix_0x11(void)
   resetN();
   resetH();
 
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void load_opcodes(void)
@@ -1240,54 +1240,54 @@ void load_prefixcb(void)
   PrefixCB[0x7C] = &bit7h;
 }
 
-void clock_handling(void)
+void my_clock_handling(void)
 {
-  clock.total_m += clock.m;
-  clock.total_t += clock.t;
-  clock.lineticks += clock.m;
-  switch (clock.mode)
+  my_clock.total_m += my_clock.m;
+  my_clock.total_t += my_clock.t;
+  my_clock.lineticks += my_clock.m;
+  switch (my_clock.mode)
   {
     case 0:
-      if (clock.lineticks > 203)
+      if (my_clock.lineticks > 203)
       {
         if (MMU.memory[0xFF44] == 143)
         {
-          clock.mode = 1;
+          my_clock.mode = 1;
         }
         else
         {
-          clock.mode = 2;
+          my_clock.mode = 2;
         }
-        clock.lineticks = 0;
+        my_clock.lineticks = 0;
         MMU.memory[0xFF44]++;
       }
       break;
     case 1: // VBLANK
-      if (clock.lineticks >= 456 && MMU.memory[0xFF44] == 153)
+      if (my_clock.lineticks >= 456 && MMU.memory[0xFF44] == 153)
       {
-        clock.mode = 2;
-        clock.lineticks = 0;
+        my_clock.mode = 2;
+        my_clock.lineticks = 0;
         MMU.memory[0xFF44] = 0;
-        clock.total_m  = 0;
+        my_clock.total_m  = 0;
       }
-      else if (clock.lineticks >= 456)
+      else if (my_clock.lineticks >= 456)
       {
-        clock.lineticks = 0;
+        my_clock.lineticks = 0;
         MMU.memory[0xFF44]++;
       }
       break;
     case 2:
-      if (clock.lineticks > 80)
+      if (my_clock.lineticks > 80)
       {
-        clock.mode = 3;
-        clock.lineticks = 0;
+        my_clock.mode = 3;
+        my_clock.lineticks = 0;
       }
       break;
     case 3:
-      if (clock.lineticks > 172)
+      if (my_clock.lineticks > 172)
       {
-        clock.mode = 0;
-        clock.lineticks = 0;
+        my_clock.mode = 0;
+        my_clock.lineticks = 0;
       }
       break;
   }
@@ -1302,5 +1302,5 @@ void execute(uint16_t op)
   }
   Opcodes[op]();
 
-  clock_handling();
+  my_clock_handling();
 }

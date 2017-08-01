@@ -27,7 +27,7 @@ typedef struct Registers
   Register PC;
 } Registers;
 
-typedef struct clock
+typedef struct my_clock
 {
   uint16_t m;
   uint16_t t;
@@ -35,9 +35,9 @@ typedef struct clock
   uint32_t total_t;
   uint8_t mode;
   uint16_t lineticks;
-} Clock;
+} My_clock;
 
-Clock clock;
+My_clock my_clock;
 void (*Opcodes[0xFF]) (void);
 void (*PrefixCB[0xFF]) (void);
 Registers r;

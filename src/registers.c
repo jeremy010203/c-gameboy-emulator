@@ -8,10 +8,10 @@ void init_registers()
   r.HL.val = 0;
   r.SP.val = 0;
   r.PC.val = 0;
-  clock.total_m = 0;
-  clock.total_t = 0;
-  clock.lineticks = 0;
-  clock.mode = 2;
+  my_clock.total_m = 0;
+  my_clock.total_t = 0;
+  my_clock.lineticks = 0;
+  my_clock.mode = 2;
 }
 
 void print_r()
@@ -34,8 +34,8 @@ static void load(uint8_t* to, uint8_t* from)
     exit(1);
   }
   *to = *from;
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void setZ(void)
@@ -358,15 +358,15 @@ void bit7h(void)
     resetZ();
   resetN();
   setH();
-  clock.m = 2;
-  clock.t = 8;
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
 
 void nop()
 {
   r.PC.val++;
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
 
 void xora(void)
@@ -377,6 +377,6 @@ void xora(void)
   resetN();
   resetH();
   resetC();
-  clock.m = 1;
-  clock.t = 4;
+  my_clock.m = 1;
+  my_clock.t = 4;
 }
