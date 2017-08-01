@@ -17,12 +17,12 @@ void init_registers()
 void print_r()
 {
     printf("---Registers---\n");
-    printf("A: %d | F: %d\n", r.AF.bytes.high, r.AF.bytes.low);
-    printf("B: %d | C: %d\n", r.BC.bytes.high, r.BC.bytes.low);
-    printf("D: %d | E: %d\n", r.DE.bytes.high, r.DE.bytes.low);
-    printf("H: %d | L: %d\n", r.HL.bytes.high, r.HL.bytes.low);
-    printf("SP: %d\n", r.SP.val);
-    printf("PC: %d\n", r.PC.val);
+    printf("A: %x | F: %x\n", r.AF.bytes.high, r.AF.bytes.low);
+    printf("B: %x | C: %x\n", r.BC.bytes.high, r.BC.bytes.low);
+    printf("D: %x | E: %x\n", r.DE.bytes.high, r.DE.bytes.low);
+    printf("H: %x | L: %x\n", r.HL.bytes.high, r.HL.bytes.low);
+    printf("SP: %x\n", r.SP.val);
+    printf("PC: %x\n", r.PC.val);
     printf("---------------\n");
 }
 

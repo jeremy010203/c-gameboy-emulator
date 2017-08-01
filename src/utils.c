@@ -417,6 +417,7 @@ void opcode_0x26(void)
   clock.t = 8;
 }
 
+// ADD A,B
 void opcode_0x80(void)
 {
   uint16_t a = r.AF.bytes.high;
@@ -426,6 +427,117 @@ void opcode_0x80(void)
   r.AF.bytes.high += r.BC.bytes.high;
   r.AF.bytes.high == 0 ? setZ() : resetZ();
   ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,C
+void opcode_0x81(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t c = r.BC.bytes.low;
+  (a + c > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.BC.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.BC.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,D
+void opcode_0x82(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t d = r.DE.bytes.high;
+  (a + d > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.DE.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.DE.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,E
+void opcode_0x83(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t e = r.DE.bytes.low;
+  (a + e > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.DE.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.DE.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,H
+void opcode_0x84(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t h = r.HL.bytes.high;
+  (a + h > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.HL.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.HL.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,L
+void opcode_0x85(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t l = r.HL.bytes.low;
+  (a + l > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.HL.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.HL.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// ADD A,(HL)
+void opcode_0x86(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t hl = MMU.memory[r.HL.val];
+  (a + hl > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += MMU.memory[r.HL.val];
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// ADD A,A
+void opcode_0x87(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  (a + a > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.AF.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.AF.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
   clock.m = 1;
@@ -1075,6 +1187,13 @@ void load_opcodes(void)
   Opcodes[0x7F] = &loadaa;
 
   Opcodes[0x80] = &opcode_0x80;
+  Opcodes[0x81] = &opcode_0x81;
+  Opcodes[0x82] = &opcode_0x82;
+  Opcodes[0x83] = &opcode_0x83;
+  Opcodes[0x84] = &opcode_0x84;
+  Opcodes[0x85] = &opcode_0x85;
+  Opcodes[0x86] = &opcode_0x86;
+  Opcodes[0x87] = &opcode_0x87;
 
   Opcodes[0x90] = &opcode_0x90;
   Opcodes[0x91] = &opcode_0x91;
