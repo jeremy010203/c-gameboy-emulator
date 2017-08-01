@@ -428,8 +428,135 @@ void opcode_0x80(void)
   ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
-  clock.m = 3;
-  clock.t = 12;
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB B
+void opcode_0x90(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t b = r.BC.bytes.high;
+  (a < b) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.BC.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.BC.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB C
+void opcode_0x91(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t c = r.BC.bytes.low;
+  (a < c) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.BC.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.BC.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB D
+void opcode_0x92(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t d = r.DE.bytes.high;
+  (a < d) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.DE.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.DE.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB E
+void opcode_0x93(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t e = r.DE.bytes.low;
+  (a < e) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.DE.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.DE.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB H
+void opcode_0x94(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t h = r.HL.bytes.high;
+  (a < h) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.HL.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.HL.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB L
+void opcode_0x95(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t l = r.HL.bytes.low;
+  (a < l) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.HL.bytes.low;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.HL.bytes.low ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
+}
+
+// SUB (HL)
+void opcode_0x96(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t hl = MMU.memory[r.HL.val];
+  (a < hl) ? setC() : resetC();
+
+  r.AF.bytes.high -= MMU.memory[r.HL.val];
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 8;
+}
+
+// SUB A
+void opcode_0x97(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  (a < a) ? setC() : resetC();
+
+  r.AF.bytes.high -= r.AF.bytes.high;
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ r.AF.bytes.high ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  setN();
+
+  clock.m = 1;
+  clock.t = 4;
 }
 
 // CP d8
@@ -837,6 +964,15 @@ void load_opcodes(void)
 
   Opcodes[0x80] = &opcode_0x80;
 
+  Opcodes[0x90] = &opcode_0x90;
+  Opcodes[0x91] = &opcode_0x91;
+  Opcodes[0x92] = &opcode_0x92;
+  Opcodes[0x93] = &opcode_0x93;
+  Opcodes[0x94] = &opcode_0x94;
+  Opcodes[0x95] = &opcode_0x95;
+  Opcodes[0x96] = &opcode_0x96;
+  Opcodes[0x97] = &opcode_0x97;
+
   Opcodes[0xAF] = &xora;
 
   Opcodes[0xC1] = &opcode_0xc1;
@@ -864,15 +1000,8 @@ void load_prefixcb(void)
   PrefixCB[0x7C] = &bit7h;
 }
 
-void execute(uint16_t op)
+void clock_handling(void)
 {
-  if (!Opcodes[op])
-  {
-    fprintf(stderr, "Unknown Op %x at address %x", op, r.PC.val - 1);
-    exit(1);
-  }
-  Opcodes[op]();
-
   clock.total_m += clock.m;
   clock.total_t += clock.t;
   clock.lineticks += clock.m;
@@ -881,10 +1010,9 @@ void execute(uint16_t op)
     case 0:
       if (clock.lineticks > 203)
       {
-        if (clock.total_m >= 70224)
+        if (MMU.memory[0xFF44] == 143)
         {
           clock.mode = 1;
-          clock.total_m  = 0;
         }
         else
         {
@@ -894,12 +1022,18 @@ void execute(uint16_t op)
         MMU.memory[0xFF44]++;
       }
       break;
-    case 1:
-      if (clock.lineticks >= 4560)
+    case 1: // VBLANK
+      if (clock.lineticks >= 456 && MMU.memory[0xFF44] == 153)
       {
         clock.mode = 2;
         clock.lineticks = 0;
         MMU.memory[0xFF44] = 0;
+        clock.total_m  = 0;
+      }
+      else if (clock.lineticks >= 456)
+      {
+        clock.lineticks = 0;
+        MMU.memory[0xFF44]++;
       }
       break;
     case 2:
@@ -917,4 +1051,16 @@ void execute(uint16_t op)
       }
       break;
   }
+}
+
+void execute(uint16_t op)
+{
+  if (!Opcodes[op])
+  {
+    fprintf(stderr, "Unknown Op %x at address %x", op, r.PC.val - 1);
+    exit(1);
+  }
+  Opcodes[op]();
+
+  clock_handling();
 }

@@ -61,9 +61,7 @@ void debug_mode(SDL_Renderer *renderer)
       char *tmp = input + 2;
       uint16_t addr = strtoul(tmp, NULL, 16);
       if (breakpoints[99] > -1)
-      {
-        printf("Could not add a breakpoint you already have 100 breakpoints registered.");
-      }
+        printf("Could not add a breakpoint you already have 100 breakpoints registered.\n");
 
       for (int i = 0; i < 100; i++)
       {
@@ -79,39 +77,73 @@ void debug_mode(SDL_Renderer *renderer)
     {
         exit(0);
     }
+    else
+    {
+        printf("Available commands:\n");
+        printf("- 'r'          : run until a breakpoint\n");
+        printf("- 'n'          : execute one op\n");
+        printf("- 'b <address> : set a breakpoint at <address>\n");
+        printf("- 'q'          : quit\n");
+        printf("- 'show reg'   : print registers informations\n");
+    }
   }
 }
 
-int main(void)
+int main(int argc, char *args[])
 {
-  SDL_Init(SDL_INIT_VIDEO);
+
+  int debug = 0;
+  int sdl = 0;
+
+  for (int i = 1; i < argc; i++)
+  {
+    if (strcmp(args[i], "--debug") == 0)
+    {
+      debug = 1;
+    }
+    else if (strcmp(args[i], "--sdl") == 0)
+    {
+      sdl = 1;
+    }
+    else
+    {
+      printf("Unknown arg: %s\n", args[i]);
+      exit(1);
+    }
+  }
+
+  if (sdl)
+    SDL_Init(SDL_INIT_VIDEO);
+
   SDL_Window* pWindow = NULL;
   SDL_Renderer *renderer = NULL;
 
-  SDL_CreateWindowAndRenderer(256, 256, 0, &pWindow, &renderer);
+  if (sdl)
+  {
+    SDL_CreateWindowAndRenderer(256, 256, 0, &pWindow, &renderer);
 
-  if (!pWindow)
-  {
-    fprintf(stderr,"Erreur de création de la fenêtre: %s\n", SDL_GetError());
-  }
-  else
-  {
-    SDL_RenderClear(renderer);
+    if (!pWindow)
+    {
+      fprintf(stderr,"Erreur de création de la fenêtre: %s\n", SDL_GetError());
+    }
+    else
+    {
+      SDL_RenderClear(renderer);
+    }
   }
 
   init();
 
   printf("Load bios successfully\n");
-  int debug = 1;
 
   if (debug)
     debug_mode(renderer);
 
   while (1)
   {
-    printf("%x -> ", r.PC.val);
+    //printf("%x -> ", r.PC.val);
     uint8_t op = read_byte();
-    printf("%x\n", op);
+    //printf("%x\n", op);
     /*if (debug && op == 0xCD)
     {
       print_memory(r.PC.val, r.PC.val + 10);
@@ -121,7 +153,11 @@ int main(void)
     //print_r();
   }
 
-  SDL_DestroyWindow(pWindow);
-  SDL_Quit();
+  if (sdl)
+  {
+    SDL_DestroyWindow(pWindow);
+    SDL_Quit();
+  }
+
   return 0;
 }

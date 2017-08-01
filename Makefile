@@ -10,7 +10,7 @@ $(SOURCE_DIR)/utils.c \
 $(SOURCE_DIR)/vram.c
 
 all:
-	gcc -g -I$(HEADER_DIR) $(SOURCE_FILES) -lSDL2 -o main
+	gcc-7 -g -I$(HEADER_DIR) $(SOURCE_FILES) -lSDL2 -o main
 
 clean:
 	$(RM) main
