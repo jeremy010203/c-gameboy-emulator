@@ -167,6 +167,24 @@ void loadhlpa(void)
   my_clock.t = 8;
 }
 
+// LD (BC), A
+void opcode_0x02(void)
+{
+  write_memory(r.BC.val, r.AF.bytes.high);
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (DE), A
+void opcode_0x12(void)
+{
+  write_memory(r.DE.val, r.AF.bytes.high);
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
 void loadhlma(void)
 {
   write_memory(r.HL.val, r.AF.bytes.high);
@@ -508,6 +526,81 @@ void opcode_0x16(void)
 void opcode_0x26(void)
 {
   r.HL.bytes.high = read_byte();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+// ADD HL, BC
+void opcode_0x09(void)
+{
+  uint32_t hl = r.HL.val;
+  uint32_t bc = r.BC.val;
+  (hl + bc > 0xFFFF) ? setC() : resetC();
+
+  r.HL.val += r.BC.val;
+  ((r.HL.val ^ r.BC.val ^ (uint8_t)hl) & 0x10) ? setH() : resetH();
+  resetN();
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// ADD HL, DE
+void opcode_0x19(void)
+{
+  uint32_t hl = r.HL.val;
+  uint32_t de = r.DE.val;
+  (hl + de > 0xFFFF) ? setC() : resetC();
+
+  r.HL.val += r.DE.val;
+  ((r.HL.val ^ r.DE.val ^ (uint8_t)hl) & 0x10) ? setH() : resetH();
+  resetN();
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// ADD HL, HL
+void opcode_0x29(void)
+{
+  uint32_t hl = r.HL.val;
+  (hl + hl > 0xFFFF) ? setC() : resetC();
+
+  r.HL.val += r.HL.val;
+  ((r.HL.val ^ r.HL.val ^ (uint8_t)hl) & 0x10) ? setH() : resetH();
+  resetN();
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// ADD HL, SP
+void opcode_0x39(void)
+{
+  uint32_t hl = r.HL.val;
+  uint32_t sp = r.SP.val;
+  (hl + sp > 0xFFFF) ? setC() : resetC();
+
+  r.HL.val += r.SP.val;
+  ((r.HL.val ^ r.SP.val ^ (uint8_t)hl) & 0x10) ? setH() : resetH();
+  resetN();
+
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// ADC A, d8
+void opcode_0xce(void)
+{
+  uint16_t a = r.AF.bytes.high;
+  uint16_t val = read_byte();
+  (a + val + getC() > 255) ? setC() : resetC();
+
+  r.AF.bytes.high += r.BC.bytes.high + getC();
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  ((r.AF.bytes.high ^ val ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  resetN();
 
   my_clock.m = 2;
   my_clock.t = 8;
@@ -1397,13 +1490,14 @@ void opcode_0x05(void)
     setH();
 
   r.BC.bytes.high--;
-  r.BC.bytes.high == 0 ? setZ() : resetZ();
+  r.BC.bytes.high == 0u ? setZ() : resetZ();
   setN();
 
   my_clock.m = 1;
   my_clock.t = 4;
 }
 
+// DEC E
 void opcode_0x15(void)
 {
   if (r.DE.bytes.high == 0)
@@ -1833,10 +1927,12 @@ void load_opcodes(void)
 {
   Opcodes[0x00] = &nop;
   Opcodes[0x01] = &opcode_0x01;
+  Opcodes[0x02] = &opcode_0x02;
   Opcodes[0x03] = &opcode_0x03;
   Opcodes[0x04] = &opcode_0x04;
   Opcodes[0x05] = &opcode_0x05;
   Opcodes[0x06] = &opcode_0x06;
+  Opcodes[0x09] = &opcode_0x09;
   Opcodes[0x0A] = &opcode_0x0a;
   Opcodes[0x0B] = &opcode_0x0b;
   Opcodes[0x0C] = &opcode_0x0c;
@@ -1844,12 +1940,14 @@ void load_opcodes(void)
   Opcodes[0x0E] = &loadcd8;
 
   Opcodes[0x11] = &opcode_0x11;
+  Opcodes[0x12] = &opcode_0x12;
   Opcodes[0x13] = &opcode_0x13;
   Opcodes[0x14] = &opcode_0x14;
   Opcodes[0x15] = &opcode_0x15;
   Opcodes[0x16] = &opcode_0x16;
   Opcodes[0x17] = &opcode_0x17;
   Opcodes[0x18] = &opcode_0x18;
+  Opcodes[0x19] = &opcode_0x19;
   Opcodes[0x1A] = &opcode_0x1a;
   Opcodes[0x1B] = &opcode_0x1b;
   Opcodes[0x1C] = &opcode_0x1c;
@@ -1864,6 +1962,7 @@ void load_opcodes(void)
   Opcodes[0x25] = &opcode_0x25;
   Opcodes[0x26] = &opcode_0x26;
   Opcodes[0x28] = &opcode_0x28;
+  Opcodes[0x29] = &opcode_0x29;
   Opcodes[0x2A] = &opcode_0x2a;
   Opcodes[0x2B] = &opcode_0x2b;
   Opcodes[0x2C] = &opcode_0x2c;
@@ -1879,6 +1978,7 @@ void load_opcodes(void)
   Opcodes[0x35] = &opcode_0x35;
   Opcodes[0x36] = &opcode_0x36;
   Opcodes[0x38] = &opcode_0x38;
+  Opcodes[0x39] = &opcode_0x39;
   Opcodes[0x3A] = &opcode_0x3a;
   Opcodes[0x3B] = &opcode_0x3b;
   Opcodes[0x3C] = &opcode_0x3c;
@@ -2006,6 +2106,7 @@ void load_opcodes(void)
   Opcodes[0xCB] = &prefixcb;
   Opcodes[0xCC] = &opcode_0xcc;
   Opcodes[0xCD] = &opcode_0xcd;
+  Opcodes[0xCE] = &opcode_0xce;
   Opcodes[0xCF] = &opcode_0xcf;
 
   Opcodes[0xD0] = &opcode_0xd0;

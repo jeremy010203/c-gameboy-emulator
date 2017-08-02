@@ -94,6 +94,7 @@ void write_memory(uint16_t addr, uint8_t val)
 
 void request_interupt(uint8_t val)
 {
+  printf("Request interupt: %u\n", val);
   uint8_t mem = read_memory(0xFF0F);
   mem |= (1 << val);
   write_memory(0xFF0F, mem);
@@ -111,6 +112,7 @@ void do_interupt(void)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
+            printf("Execute interupt: %u\n", mem);
             execute_interupt(i);
           }
         }
