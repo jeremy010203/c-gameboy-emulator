@@ -75,7 +75,8 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
         if (state[SDL_SCANCODE_ESCAPE])
           exit(1);
       }
-      
+      do_interupt();
+
       if (is_breakpoint(breakpoints, r.PC.val))
       {
         printf("Breakpoint reached.\n");
@@ -111,6 +112,7 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
         *event_frame = 0;
       }
     }
+    do_interupt();
   }
   else if (strcmp(input, "show reg\n") == 0)
   {
@@ -162,37 +164,30 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
   else
   {
       printf("Available commands:\n");
-      printf("- 'r'          : run until a breakpoint\n");
-      printf("- 'n'          : execute one op\n");
-      printf("- 'b <address> : set a breakpoint at <address>\n");
-      printf("- 'q'          : quit\n");
-      printf("- 'show reg'   : print registers informations\n");
-  }
-}
-
-// Handle Interupts
-void handleInterupt(int nb)
-{
-  // Joypad interupt
-  if (nb == 4)
-  {
-    printf("INTERRUPT\n");
+      printf("- 'r'            : run until a breakpoint\n");
+      printf("- 'n'            : execute one op\n");
+      printf("- 'b <address>   : set a breakpoint at <address>\n");
+      printf("- 'q'            : quit\n");
+      printf("- 'show reg'     : print registers informations\n");
+      printf("- 'show rom'     : print rom informations -10<PC<+10\n");
+      printf("- 'show tilemap' : print tilemap informations\n");
   }
 }
 
 void keyPressed(int key)
 {
-  if (key == -1)
+  if (key <= -1)
     return;
 
   int unset = !test_bit(r.joypad, key);
   r.joypad &= ~(1 << key);
 
   int button = key > 3;
-  uint8_t keyReq = read_memory(0xFF00);
+  uint8_t keyReq = MMU.memory[0xFF00];
+
   int requestInterupt = (button && !test_bit(keyReq, 5)) || (!button && !test_bit(keyReq, 4));
   if (requestInterupt && !unset)
-    handleInterupt(4);
+    request_interupt(4);
 }
 
 void keyReleased(int key)
@@ -311,6 +306,7 @@ int main(int argc, char *args[])
           event_frame = 0;
         }
       }
+      do_interupt();
     }
 
     if (sdl)

@@ -128,7 +128,6 @@ void loadae(void);
 void loadah(void);
 void loadal(void);
 
-void xora(void);
 void bit7h(void);
 
 #endif /* REGISTERS_H */

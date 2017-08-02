@@ -25,6 +25,7 @@ void print_r()
     printf("H: %x | L: %x\n", r.HL.bytes.high, r.HL.bytes.low);
     printf("SP: %x\n", r.SP.val);
     printf("PC: %x\n", r.PC.val);
+    printf("PAD: %x\n", r.joypad);
     printf("---------------\n");
 }
 
@@ -366,18 +367,6 @@ void bit7h(void)
 
 void nop()
 {
-  my_clock.m = 1;
-  my_clock.t = 4;
-}
-
-void xora(void)
-{
-  r.AF.bytes.high ^= r.AF.bytes.high;
-
-  setZ();
-  resetN();
-  resetH();
-  resetC();
   my_clock.m = 1;
   my_clock.t = 4;
 }

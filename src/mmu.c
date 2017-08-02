@@ -58,6 +58,7 @@ uint8_t get_joypad(void)
 {
   uint8_t mem = MMU.memory[0xFF00];
   mem ^= 0xFF;
+
   if (!test_bit(mem, 4))
   {
     uint8_t joy = (r.joypad >> 4) | 0xF0;
@@ -89,4 +90,46 @@ void write_memory(uint16_t addr, uint8_t val)
     load_rom("misc/Tetris.gb");
   }
   MMU.memory[addr] = val;
+}
+
+void request_interupt(uint8_t val)
+{
+  uint8_t mem = read_memory(0xFF0F);
+  mem |= (1 << val);
+  write_memory(0xFF0F, mem);
+}
+
+void do_interupt(void)
+{
+  if (r.ime)
+  {
+    uint8_t mem = read_memory(0xFF0F);
+    uint8_t ena = read_memory(0xFFFF);
+    if (mem > 0)
+    {
+        for (uint8_t i = 0; i < 5; i++)
+        {
+          if (test_bit(mem, i) && test_bit(ena, i))
+          {
+            execute_interupt(i);
+          }
+        }
+    }
+  }
+}
+
+void execute_interupt(uint8_t i)
+{
+  r.ime = 0;
+  uint8_t mem = read_memory(0xFF0F);
+  mem &= ~(1 << i);
+  write_memory(0xFF0F, mem);
+  push_stack(r.PC.val);
+  switch (i)
+  {
+    case 0: r.PC.val = 0x40; break;
+    case 1: r.PC.val = 0x48; break;
+    case 2: r.PC.val = 0x50; break;
+    case 4: r.PC.val = 0x60; break;
+  }
 }

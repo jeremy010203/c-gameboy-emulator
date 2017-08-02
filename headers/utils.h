@@ -4,11 +4,6 @@
 #include "mmu.h"
 #include "registers.h"
 
-extern Mmu MMU;
-extern Registers r;
-extern My_clock my_clock;
-extern void (*Opcodes[0xFF]) (void);
-
 enum Op
 {
   NOP       = 0x00,
@@ -51,6 +46,9 @@ enum Op
 uint8_t read_byte(void);
 uint16_t read_word(void);
 uint8_t peak_byte(void);
+void push_stack(uint16_t val);
+uint16_t pop_stack(void);
+
 void init(void);
 void load_opcodes(void);
 void load_prefixcb(void);
