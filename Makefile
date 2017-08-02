@@ -11,7 +11,7 @@ $(SOURCE_DIR)/utils.c \
 $(SOURCE_DIR)/vram.c
 
 all:
-	gcc-7 -g -I$(HEADER_DIR) $(SOURCE_FILES) -lSDL2 -o main $(CFLAGS)
+	gcc-7 -g -I$(HEADER_DIR) $(SOURCE_FILES) -lSDL2 -lSDL2_image -o main $(CFLAGS)
 
 clean:
 	$(RM) main

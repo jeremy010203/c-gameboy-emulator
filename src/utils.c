@@ -11,7 +11,7 @@ void init(void)
 // Read a byte in memory and increment PC
 uint8_t read_byte(void)
 {
-  return MMU.memory[r.PC.val++];
+  return read_memory(r.PC.val++);
 }
 
 // Read a word in memory and increment PC by 2
@@ -26,19 +26,19 @@ uint16_t read_word(void)
 // Read a byte in memory without increment PC
 uint8_t peak_byte(void)
 {
-  return MMU.memory[r.PC.val];
+  return read_memory(r.PC.val);
 }
 
 void push_stack(uint16_t val)
 {
-  MMU.memory[r.SP.val--] = (uint8_t)(val >> 8);
-  MMU.memory[r.SP.val--] = (uint8_t)((val << 8) >> 8);
+  write_memory(r.SP.val--, (uint8_t)(val >> 8));
+  write_memory(r.SP.val--, (uint8_t)((val << 8) >> 8));
 }
 
 uint16_t pop_stack(void)
 {
-  uint8_t v1 = MMU.memory[++r.SP.val];
-  uint16_t v2 = MMU.memory[++r.SP.val];
+  uint8_t v1 = read_memory(++r.SP.val);
+  uint16_t v2 = read_memory(++r.SP.val);
   return (v2 << 8) | v1;
 }
 
@@ -121,7 +121,7 @@ void prefixcb(void)
 
 void loadhlpa(void)
 {
-  MMU.memory[r.HL.val] = r.AF.bytes.high;
+  write_memory(r.HL.val, r.AF.bytes.high);
   r.HL.val++;
 
   my_clock.m = 1;
@@ -130,7 +130,7 @@ void loadhlpa(void)
 
 void loadhlma(void)
 {
-  MMU.memory[r.HL.val] = r.AF.bytes.high;
+  write_memory(r.HL.val, r.AF.bytes.high);
   r.HL.val--;
 
   my_clock.m = 1;
@@ -185,7 +185,7 @@ void loadad8(void)
 void opcode_0xe2(void)
 {
   uint16_t pos = 0xFF00 + r.BC.bytes.low;
-  MMU.memory[pos] = r.AF.bytes.high;
+  write_memory(pos, r.AF.bytes.high);
 
   my_clock.m = 2;
   my_clock.t = 8;
@@ -292,11 +292,11 @@ void opcode_0x24(void)
 // INC (HL)
 void opcode_0x34(void)
 {
-  uint8_t hl = MMU.memory[r.HL.bytes.high];
+  uint8_t hl = read_memory(r.HL.bytes.high);
 
-  MMU.memory[r.HL.bytes.high]++;
-  MMU.memory[r.HL.bytes.high] == 0 ? setZ() : resetZ();
-  ((MMU.memory[r.HL.bytes.high] ^ 0x01 ^ hl) & 0x10) ? setH() : resetH();
+  write_memory(r.HL.bytes.high, read_memory(r.HL.bytes.high) + 1);
+  read_memory(r.HL.bytes.high) == 0 ? setZ() : resetZ();
+  ((read_memory(r.HL.bytes.high) ^ 0x01 ^ hl) & 0x10) ? setH() : resetH();
   resetN();
 
   my_clock.m = 1;
@@ -305,7 +305,7 @@ void opcode_0x34(void)
 
 void opcode_0x77(void)
 {
-  MMU.memory[r.HL.val] = r.AF.bytes.high;
+  write_memory(r.HL.val, r.AF.bytes.high);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -329,7 +329,7 @@ void opcode_0x11(void)
 
 void opcode_0x0a(void)
 {
-  r.AF.bytes.high = MMU.memory[r.BC.val];
+  r.AF.bytes.high = read_memory(r.BC.val);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -337,7 +337,7 @@ void opcode_0x0a(void)
 
 void opcode_0x1a(void)
 {
-  r.AF.bytes.high = MMU.memory[r.DE.val];
+  r.AF.bytes.high = read_memory(r.DE.val);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -345,7 +345,7 @@ void opcode_0x1a(void)
 
 void opcode_0x2a(void)
 {
-  r.AF.bytes.high = MMU.memory[r.HL.val];
+  r.AF.bytes.high = read_memory(r.HL.val);
   r.HL.val++;
 
   my_clock.m = 1;
@@ -354,7 +354,7 @@ void opcode_0x2a(void)
 
 void opcode_0x36(void)
 {
-  MMU.memory[r.HL.val] = read_byte();
+  write_memory(r.HL.val, read_byte());
 
   my_clock.m = 2;
   my_clock.t = 12;
@@ -362,7 +362,7 @@ void opcode_0x36(void)
 
 void opcode_0x46(void)
 {
-  r.BC.bytes.high = MMU.memory[r.HL.val];
+  r.BC.bytes.high = read_memory(r.HL.val);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -370,7 +370,7 @@ void opcode_0x46(void)
 
 void opcode_0x56(void)
 {
-  r.DE.bytes.high = MMU.memory[r.HL.val];
+  r.DE.bytes.high = read_memory(r.HL.val);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -378,7 +378,7 @@ void opcode_0x56(void)
 
 void opcode_0x66(void)
 {
-  r.HL.bytes.high = MMU.memory[r.HL.val];
+  r.HL.bytes.high = read_memory(r.HL.val);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -418,7 +418,7 @@ void opcode_0x3b(void)
 
 void opcode_0x3a(void)
 {
-  r.AF.bytes.high = MMU.memory[r.HL.val];
+  r.AF.bytes.high = read_memory(r.HL.val);
   r.HL.val--;
 
   my_clock.m = 1;
@@ -565,12 +565,12 @@ void opcode_0x85(void)
 void opcode_0x86(void)
 {
   uint16_t a = r.AF.bytes.high;
-  uint16_t hl = MMU.memory[r.HL.val];
+  uint16_t hl = read_memory(r.HL.val);
   (a + hl > 255) ? setC() : resetC();
 
-  r.AF.bytes.high += MMU.memory[r.HL.val];
+  r.AF.bytes.high += read_memory(r.HL.val);
   r.AF.bytes.high == 0 ? setZ() : resetZ();
-  ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  ((r.AF.bytes.high ^ read_memory(r.HL.val) ^ (uint8_t)a) & 0x10) ? setH() : resetH();
   resetN();
 
   my_clock.m = 1;
@@ -692,12 +692,12 @@ void opcode_0x95(void)
 void opcode_0x96(void)
 {
   uint16_t a = r.AF.bytes.high;
-  uint16_t hl = MMU.memory[r.HL.val];
+  uint16_t hl = read_memory(r.HL.val);
   (a < hl) ? setC() : resetC();
 
-  r.AF.bytes.high -= MMU.memory[r.HL.val];
+  r.AF.bytes.high -= read_memory(r.HL.val);
   r.AF.bytes.high == 0 ? setZ() : resetZ();
-  ((r.AF.bytes.high ^ MMU.memory[r.HL.val] ^ (uint8_t)a) & 0x10) ? setH() : resetH();
+  ((r.AF.bytes.high ^ read_memory(r.HL.val)^ (uint8_t)a) & 0x10) ? setH() : resetH();
   setN();
 
   my_clock.m = 1;
@@ -782,7 +782,7 @@ void opcode_0xb5(void)
 // OR (HL)
 void opcode_0xb6(void)
 {
-  r.AF.bytes.high |= MMU.memory[r.HL.val];
+  r.AF.bytes.high |= read_memory(r.HL.val);
   r.AF.bytes.high == 0 ? setZ() : resetZ();
 
   my_clock.m = 1;
@@ -900,7 +900,7 @@ void opcode_0xbd(void)
 // CP (HL)
 void opcode_0xbe(void)
 {
-  uint8_t val = MMU.memory[r.HL.val];
+  uint8_t val = read_memory(r.HL.val);
 
   (val > r.AF.bytes.high) ? setC() : resetC();
   ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
@@ -929,7 +929,7 @@ void opcode_0xbf(void)
 void opcode_0xea(void)
 {
   uint16_t val = read_word();
-  MMU.memory[val] = r.AF.bytes.high;
+  write_memory(val, r.AF.bytes.high);
 
   my_clock.m = 3;
   my_clock.t = 16;
@@ -939,7 +939,7 @@ void opcode_0xea(void)
 void opcode_0xfa(void)
 {
   uint16_t val = read_word();
-  r.AF.bytes.high = MMU.memory[val];
+  r.AF.bytes.high = read_memory(val);
 
   my_clock.m = 3;
   my_clock.t = 16;
@@ -1126,12 +1126,12 @@ void opcode_0x25(void)
 
 void opcode_0x35(void)
 {
-  uint8_t hl = MMU.memory[r.HL.val];
+  uint8_t hl = read_memory(r.HL.val);
   if (hl == 0)
     setH();
 
-  MMU.memory[r.HL.val]--;
-  MMU.memory[r.HL.val] == 0 ? setZ() : resetZ();
+  write_memory(r.HL.val, read_memory(r.HL.val) - 1);
+  read_memory(r.HL.val) == 0 ? setZ() : resetZ();
   setN();
 
   my_clock.m = 1;
@@ -1183,7 +1183,7 @@ void opcode_0xc9(void)
 void opcode_0xe0(void)
 {
   uint16_t addr = 0xFF00 + read_byte();
-  MMU.memory[addr] = r.AF.bytes.high;
+  write_memory(addr, r.AF.bytes.high);
 
   my_clock.m = 2;
   my_clock.t = 12;
@@ -1193,7 +1193,7 @@ void opcode_0xe0(void)
 void opcode_0xf0(void)
 {
   uint16_t addr = 0xFF00 + read_byte();
-  r.AF.bytes.high = MMU.memory[addr];
+  r.AF.bytes.high = read_memory(addr);
 
   my_clock.m = 2;
   my_clock.t = 12;
@@ -1423,7 +1423,7 @@ void my_clock_handling(void)
     case 0:
       if (my_clock.lineticks > 203)
       {
-        if (MMU.memory[0xFF44] == 143)
+        if (read_memory(0xFF44) == 143)
         {
           my_clock.mode = 1;
         }
@@ -1432,21 +1432,21 @@ void my_clock_handling(void)
           my_clock.mode = 2;
         }
         my_clock.lineticks = 0;
-        MMU.memory[0xFF44]++;
+        write_memory(0xFF44, read_memory(0xFF44) + 1);
       }
       break;
     case 1: // VBLANK
-      if (my_clock.lineticks >= 456 && MMU.memory[0xFF44] == 153)
+      if (my_clock.lineticks >= 456 && read_memory(0xFF44) == 153)
       {
         my_clock.mode = 2;
         my_clock.lineticks = 0;
-        MMU.memory[0xFF44] = 0;
+        write_memory(0xFF44, 0);
         my_clock.total_m  = 0;
       }
       else if (my_clock.lineticks >= 456)
       {
         my_clock.lineticks = 0;
-        MMU.memory[0xFF44]++;
+        write_memory(0xFF44, read_memory(0xFF44) + 1);
       }
       break;
     case 2:

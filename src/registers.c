@@ -9,7 +9,7 @@ void init_registers()
   r.SP.val = 0;
   r.PC.val = 0;
   r.ime = 1;
-  r.joypad = 0;
+  r.joypad = 0xFF;
   my_clock.total_m = 0;
   my_clock.total_t = 0;
   my_clock.lineticks = 0;
