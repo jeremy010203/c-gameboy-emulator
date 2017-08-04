@@ -156,6 +156,39 @@ void xor_8_op(uint8_t *first, const uint8_t second)
   my_clock.t = 4;
 }
 
+void and_op(uint8_t *first, const uint8_t second)
+{
+  *first &= second;
+  *first == 0 ? setZ() : resetZ();
+  setH();
+  resetN();
+  resetC();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+void or_op(uint8_t *first, const uint8_t second)
+{
+  *first |= second;
+  *first == 0 ? setZ() : resetZ();
+  setH();
+  resetN();
+  resetC();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+void cp_op(const uint8_t first, const uint8_t second)
+{
+  uint8_t tmp = first;
+  sub_8_op(&tmp, second);
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 void ret_cond_op(int cond)
 {
   if (cond)

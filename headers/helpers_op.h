@@ -20,6 +20,9 @@ void add_8_op(uint8_t *first, const uint8_t second);
 void add_16_op(uint16_t *first, const uint16_t second);
 void sub_8_op(uint8_t *first, const uint8_t second);
 void xor_8_op(uint8_t *first, const uint8_t second);
+void cp_op(const uint8_t first, const uint8_t second);
+void and_op(uint8_t *first, const uint8_t second);
+void or_op(uint8_t *first, const uint8_t second);
 void ret_cond_op(int cond);
 
 #endif /* HELPERS_OP_H */

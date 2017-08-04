@@ -610,12 +610,7 @@ void opcode_0xaf(void)
 // AND d8
 void opcode_0xe6(void)
 {
-  r.AF.bytes.high &= read_byte();
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
+  and_op(&r.AF.bytes.high, read_byte());
   my_clock.m = 2;
   my_clock.t = 8;
 }
@@ -623,90 +618,43 @@ void opcode_0xe6(void)
 // AND B
 void opcode_0xa0(void)
 {
-  r.AF.bytes.high &= r.BC.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.BC.bytes.high);
 }
 
 // AND C
 void opcode_0xa1(void)
 {
-  r.AF.bytes.high &= r.BC.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.BC.bytes.low);
 }
 
 // AND D
 void opcode_0xa2(void)
 {
-  r.AF.bytes.high &= r.DE.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.DE.bytes.high);
 }
 
 // AND E
 void opcode_0xa3(void)
 {
-  r.AF.bytes.high &= r.DE.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.DE.bytes.low);
 }
 
 // AND H
 void opcode_0xa4(void)
 {
-  r.AF.bytes.high &= r.HL.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.HL.bytes.high);
 }
 
 // AND L
 void opcode_0xa5(void)
 {
-  r.AF.bytes.high &= r.HL.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.HL.bytes.low);
 }
 
 // AND (HL)
 void opcode_0xa6(void)
 {
-  r.AF.bytes.high &= read_memory(r.HL.val);
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
+  and_op(&r.AF.bytes.high, read_memory(r.HL.val));
   my_clock.m = 1;
   my_clock.t = 8;
 }
@@ -714,25 +662,13 @@ void opcode_0xa6(void)
 // AND A
 void opcode_0xa7(void)
 {
-  r.AF.bytes.high &= r.AF.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  and_op(&r.AF.bytes.high, r.AF.bytes.high);
 }
 
 // OR d8
 void opcode_0xf6(void)
 {
-  r.AF.bytes.high |= read_byte();
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
+  or_op(&r.AF.bytes.high, read_byte());
   my_clock.m = 2;
   my_clock.t = 8;
 }
@@ -740,90 +676,43 @@ void opcode_0xf6(void)
 // OR B
 void opcode_0xb0(void)
 {
-  r.AF.bytes.high |= r.BC.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.BC.bytes.high);
 }
 
 // OR C
 void opcode_0xb1(void)
 {
-  r.AF.bytes.high |= r.BC.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.BC.bytes.low);
 }
 
 // OR D
 void opcode_0xb2(void)
 {
-  r.AF.bytes.high |= r.DE.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.DE.bytes.high);
 }
 
 // OR E
 void opcode_0xb3(void)
 {
-  r.AF.bytes.high |= r.DE.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.DE.bytes.low);
 }
 
 // OR H
 void opcode_0xb4(void)
 {
-  r.AF.bytes.high |= r.HL.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.HL.bytes.high);
 }
 
 // OR L
 void opcode_0xb5(void)
 {
-  r.AF.bytes.high |= r.HL.bytes.low;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.HL.bytes.low);
 }
 
 // OR (HL)
 void opcode_0xb6(void)
 {
-  r.AF.bytes.high |= read_memory(r.HL.val);
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
+  or_op(&r.AF.bytes.high, read_memory(r.HL.val));
   my_clock.m = 1;
   my_clock.t = 8;
 }
@@ -831,26 +720,13 @@ void opcode_0xb6(void)
 // OR A
 void opcode_0xb7(void)
 {
-  r.AF.bytes.high |= r.AF.bytes.high;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetH();
-  resetN();
-  resetC();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  or_op(&r.AF.bytes.high, r.AF.bytes.high);
 }
 
 // CP d8
 void opcode_0xfe(void)
 {
-  uint8_t val = read_byte();
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
+  cp_op(r.AF.bytes.high, read_byte());
   my_clock.m = 2;
   my_clock.t = 8;
 }
@@ -858,97 +734,43 @@ void opcode_0xfe(void)
 // CP B
 void opcode_0xb8(void)
 {
-  uint8_t val = r.BC.bytes.high;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.BC.bytes.high);
 }
 
 // CP C
 void opcode_0xb9(void)
 {
-  uint8_t val = r.BC.bytes.low;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.BC.bytes.low);
 }
 
 // CP D
 void opcode_0xba(void)
 {
-  uint8_t val = r.DE.bytes.high;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.DE.bytes.high);
 }
 
 // CP E
 void opcode_0xbb(void)
 {
-  uint8_t val = r.DE.bytes.low;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.DE.bytes.low);
 }
 
 // CP H
 void opcode_0xbc(void)
 {
-  uint8_t val = r.HL.bytes.high;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.HL.bytes.high);
 }
 
 // CP L
 void opcode_0xbd(void)
 {
-  uint8_t val = r.HL.bytes.low;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.HL.bytes.low);
 }
 
 // CP (HL)
 void opcode_0xbe(void)
 {
-  uint8_t val = read_memory(r.HL.val);
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
+  cp_op(r.AF.bytes.high, read_memory(r.HL.val));
   my_clock.m = 1;
   my_clock.t = 8;
 }
@@ -956,15 +778,7 @@ void opcode_0xbe(void)
 // CP A
 void opcode_0xbf(void)
 {
-  uint8_t val = r.AF.bytes.high;
-
-  (val > r.AF.bytes.high) ? setC() : resetC();
-  ((val & 0x0f) > (r.AF.bytes.high & 0x0f)) ? setH() : resetH();
-  r.AF.bytes.high == val ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  cp_op(r.AF.bytes.high, r.AF.bytes.high);
 }
 
 // (a16) <- A
