@@ -62,9 +62,6 @@ uint8_t getN(void);
 uint8_t getH(void);
 uint8_t getC(void);
 
-// Nop
-void nop(void);
-
 // B register load instructions
 void loadba(void);
 void loadbb(void);

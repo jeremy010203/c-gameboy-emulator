@@ -52,6 +52,20 @@ void inc_op(uint8_t *reg)
   my_clock.t = 4;
 }
 
+void dec_op(uint8_t *reg)
+{
+  uint8_t result = *reg - 1;
+  *reg == 0 ? setC() : resetC();
+
+  result == 0 ? setZ() : resetZ();
+  ((*reg & 0xF) - (uint8_t)1) < 0 ? setH() : resetH();
+  setN();
+
+  *reg = result;
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 void pop_op(uint16_t *reg)
 {
   *reg = pop_stack();
@@ -140,4 +154,19 @@ void xor_8_op(uint8_t *first, const uint8_t second)
 
   my_clock.m = 1;
   my_clock.t = 4;
+}
+
+void ret_cond_op(int cond)
+{
+  if (cond)
+  {
+    r.PC.val = pop_stack();
+    my_clock.t = 16;
+  }
+  else
+  {
+    my_clock.t = 8;
+  }
+
+  my_clock.m = 1;
 }

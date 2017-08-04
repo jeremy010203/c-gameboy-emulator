@@ -13,6 +13,13 @@ void init(void)
     init_mmu("misc/bios.bin");
 }
 
+// NOP
+void opcode_0x00(void)
+{
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 // POP BC
 void opcode_0xc1(void)
 {
@@ -1071,99 +1078,43 @@ void opcode_0x17(void)
 // DEC C
 void opcode_0x0d(void)
 {
-  if (r.BC.bytes.low == 0)
-    setH();
-
-  r.BC.bytes.low--;
-  r.BC.bytes.low == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.BC.bytes.low);
 }
 
 // DEC E
 void opcode_0x1d(void)
 {
-  if (r.DE.bytes.low == 0)
-    setH();
-
-  r.DE.bytes.low--;
-  r.DE.bytes.low == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.DE.bytes.low);
 }
 
 // DEC L
 void opcode_0x2d(void)
 {
-  if (r.HL.bytes.low == 0)
-    setH();
-
-  r.HL.bytes.low--;
-  r.HL.bytes.low == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.HL.bytes.low);
 }
 
 // DEC A
 void opcode_0x3d(void)
 {
-  if (r.AF.bytes.high == 0)
-    setH();
-
-  r.AF.bytes.high--;
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.AF.bytes.high);
 }
 
 // DEC B
 void opcode_0x05(void)
 {
-  if (r.BC.bytes.high == 0)
-    setH();
-
-  r.BC.bytes.high--;
-  r.BC.bytes.high == 0u ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.BC.bytes.high);
 }
 
 // DEC E
 void opcode_0x15(void)
 {
-  if (r.DE.bytes.high == 0)
-    setH();
-
-  r.DE.bytes.high--;
-  r.DE.bytes.high == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.DE.bytes.high);
 }
 
 // DEC H
 void opcode_0x25(void)
 {
-  if (r.HL.bytes.high == 0)
-    setH();
-
-  r.HL.bytes.high--;
-  r.HL.bytes.high == 0 ? setZ() : resetZ();
-  setN();
-
-  my_clock.m = 1;
-  my_clock.t = 4;
+  dec_op(&r.HL.bytes.high);
 }
 
 // DEC (HL)
@@ -1184,44 +1135,31 @@ void opcode_0x35(void)
 // INC BC
 void opcode_0x03(void)
 {
-  r.BC.val++;
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  add_16_op(&r.BC.val, 1);
 }
 
 // INC DE
 void opcode_0x13(void)
 {
-  r.DE.val++;
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  add_16_op(&r.DE.val, 1);
 }
 
 // INC HL
 void opcode_0x23(void)
 {
-  r.HL.val++;
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  add_16_op(&r.HL.val, 1);
 }
 
 // INC SP
 void opcode_0x33(void)
 {
-  r.SP.val++;
-
-  my_clock.m = 1;
-  my_clock.t = 8;
+  add_16_op(&r.SP.val, 1);
 }
 
 // RET
 void opcode_0xc9(void)
 {
-  r.PC.val = pop_stack();
-
+  pop_op(&r.PC.val);
   my_clock.m = 1;
   my_clock.t = 16;
 }
@@ -1236,65 +1174,25 @@ void opcode_0xd9(void)
 // RET NZ
 void opcode_0xc0(void)
 {
-  if (!getZ())
-  {
-    r.PC.val = pop_stack();
-    my_clock.t = 16;
-  }
-  else
-  {
-    my_clock.t = 8;
-  }
-
-  my_clock.m = 1;
+  ret_cond_op(!getZ());
 }
 
 // RET Z
 void opcode_0xc8(void)
 {
-  if (getZ())
-  {
-    r.PC.val = pop_stack();
-    my_clock.t = 16;
-  }
-  else
-  {
-    my_clock.t = 8;
-  }
-
-  my_clock.m = 1;
+  ret_cond_op(getZ());
 }
 
 // RET NC
 void opcode_0xd0(void)
 {
-  if (!getC())
-  {
-    r.PC.val = pop_stack();
-    my_clock.t = 16;
-  }
-  else
-  {
-    my_clock.t = 8;
-  }
-
-  my_clock.m = 1;
+  ret_cond_op(!getC());
 }
 
 // RET C
 void opcode_0xd8(void)
 {
-  if (getC())
-  {
-    r.PC.val = pop_stack();
-    my_clock.t = 16;
-  }
-  else
-  {
-    my_clock.t = 8;
-  }
-
-  my_clock.m = 1;
+  ret_cond_op(getC());
 }
 
 // LDH (a8), A
@@ -1470,7 +1368,7 @@ void prefix_0x37(void)
 
 void load_opcodes(void)
 {
-  Opcodes[0x00] = &nop;
+  Opcodes[0x00] = &opcode_0x00;
   Opcodes[0x01] = &opcode_0x01;
   Opcodes[0x02] = &opcode_0x02;
   Opcodes[0x03] = &opcode_0x03;

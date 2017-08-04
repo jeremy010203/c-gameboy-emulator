@@ -362,9 +362,3 @@ void bit7h(void)
   my_clock.m = 2;
   my_clock.t = 8;
 }
-
-void nop()
-{
-  my_clock.m = 1;
-  my_clock.t = 4;
-}
