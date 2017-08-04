@@ -1152,6 +1152,7 @@ void opcode_0x15(void)
   my_clock.t = 4;
 }
 
+// DEC H
 void opcode_0x25(void)
 {
   if (r.HL.bytes.high == 0)
@@ -1165,6 +1166,7 @@ void opcode_0x25(void)
   my_clock.t = 4;
 }
 
+// DEC (HL)
 void opcode_0x35(void)
 {
   uint8_t hl = read_memory(r.HL.val);
@@ -1179,6 +1181,7 @@ void opcode_0x35(void)
   my_clock.t = 4;
 }
 
+// INC BC
 void opcode_0x03(void)
 {
   r.BC.val++;
@@ -1187,6 +1190,7 @@ void opcode_0x03(void)
   my_clock.t = 8;
 }
 
+// INC DE
 void opcode_0x13(void)
 {
   r.DE.val++;
@@ -1195,6 +1199,7 @@ void opcode_0x13(void)
   my_clock.t = 8;
 }
 
+// INC HL
 void opcode_0x23(void)
 {
   r.HL.val++;
@@ -1203,6 +1208,7 @@ void opcode_0x23(void)
   my_clock.t = 8;
 }
 
+// INC SP
 void opcode_0x33(void)
 {
   r.SP.val++;
@@ -1343,81 +1349,49 @@ void opcode_0x2f(void)
 // RST 00
 void opcode_0xc7(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x0000;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0);
 }
 
 // RST 08
 void opcode_0xcf(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x0800;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x0800);
 }
 
 // RST 10
 void opcode_0xd7(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x1000;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x1000);
 }
 
 // RST 18
 void opcode_0xdf(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x1800;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x1800);
 }
 
 // RST 20
 void opcode_0xe7(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x2000;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x2000);
 }
 
 // RST 28
 void opcode_0xef(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x2800;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x2800);
 }
 
 // RST 30
 void opcode_0xf7(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x3000;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x3000);
 }
 
 // RST 38
 void opcode_0xff(void)
 {
-  push_stack(r.PC.val);
-  r.PC.val = 0x3800;
-
-  my_clock.m = 1;
-  my_clock.t = 16;
+  rst_op(0x3800);
 }
 
 void prefix_0x11(void)
@@ -1439,97 +1413,37 @@ void prefix_0x11(void)
 // SWAP B
 void prefix_0x30(void)
 {
-  uint8_t high = r.BC.bytes.high >> 4;
-  r.BC.bytes.high <<= 4;
-  r.BC.bytes.high += high;
-
-  r.BC.bytes.high == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.BC.bytes.high);
 }
 
 // SWAP C
 void prefix_0x31(void)
 {
-  uint8_t high = r.BC.bytes.low >> 4;
-  r.BC.bytes.low <<= 4;
-  r.BC.bytes.low += high;
-
-  r.BC.bytes.low == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.BC.bytes.low);
 }
 
 // SWAP D
 void prefix_0x32(void)
 {
-  uint8_t high = r.DE.bytes.high >> 4;
-  r.DE.bytes.high <<= 4;
-  r.DE.bytes.high += high;
-
-  r.DE.bytes.high == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.DE.bytes.high);
 }
 
 // SWAP E
 void prefix_0x33(void)
 {
-  uint8_t high = r.DE.bytes.low >> 4;
-  r.DE.bytes.low <<= 4;
-  r.DE.bytes.low += high;
-
-  r.DE.bytes.low == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+swap_op(&r.DE.bytes.low);
 }
 
 // SWAP H
 void prefix_0x34(void)
 {
-  uint8_t high = r.HL.bytes.high >> 4;
-  r.HL.bytes.high <<= 4;
-  r.HL.bytes.high += high;
-
-  r.HL.bytes.high == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.HL.bytes.high);
 }
 
 // SWAP L
 void prefix_0x35(void)
 {
-  uint8_t high = r.HL.bytes.low >> 4;
-  r.HL.bytes.low <<= 4;
-  r.HL.bytes.low += high;
-
-  r.HL.bytes.low == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.HL.bytes.low);
 }
 
 // SWAP (HL)
@@ -1551,17 +1465,7 @@ void prefix_0x36(void)
 // SWAP A
 void prefix_0x37(void)
 {
-  uint8_t high = r.AF.bytes.high >> 4;
-  r.AF.bytes.high <<= 4;
-  r.AF.bytes.high += high;
-
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
+  swap_op(&r.AF.bytes.high);
 }
 
 void load_opcodes(void)

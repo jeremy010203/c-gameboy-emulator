@@ -68,6 +68,30 @@ void push_op(const uint16_t reg)
   my_clock.t = 16;
 }
 
+void rst_op(const uint16_t addr)
+{
+  push_stack(r.PC.val);
+  r.PC.val = addr;
+
+  my_clock.m = 1;
+  my_clock.t = 16;
+}
+
+void swap_op(uint8_t *reg)
+{
+  uint8_t high = *reg >> 4;
+  *reg <<= 4;
+  *reg += high;
+
+  *reg == 0 ? setZ() : resetZ();
+  resetC();
+  resetN();
+  resetH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
 void add_8_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = *first + second;
