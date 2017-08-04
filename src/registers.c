@@ -355,12 +355,10 @@ int test_bit(uint8_t byte, uint8_t index)
 
 void bit7h(void)
 {
-  if (test_bit(r.HL.bytes.high, 7))
-    setZ();
-  else
-    resetZ();
+  !test_bit(r.HL.bytes.high, 7) ? setZ() : resetZ();
   resetN();
   setH();
+
   my_clock.m = 2;
   my_clock.t = 8;
 }

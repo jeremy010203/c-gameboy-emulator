@@ -40,6 +40,22 @@ void test_inc_normal(uint8_t op, uint8_t *reg, void (*custom_init)(void))
   );
 }
 
+void test_dec_normal(uint8_t op, uint8_t *reg, void (*custom_init)(void))
+{
+  test_8(op,
+    LAMBDA(void _(void) {
+      *reg = 2;
+      custom_init();
+    }),
+    LAMBDA(void _(void) {
+      CU_ASSERT(check_flags(0, 1, 0, 0));
+      CU_ASSERT(*reg == 1);
+      CU_ASSERT(r.SP.val == 0);
+      CU_ASSERT(r.PC.val == 1);
+    })
+  );
+}
+
 void test_inc_overflow(uint8_t op, uint8_t *reg, void (*custom_init)(void))
 {
   test_8(op,

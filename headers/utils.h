@@ -3,6 +3,7 @@
 
 #include "mmu.h"
 #include "registers.h"
+#include "helpers_op.h"
 
 enum Op
 {
@@ -42,12 +43,6 @@ enum Op
   LOADHLA   = 0x77,
   XORA      = 0xAF,
 };
-
-uint8_t read_byte(void);
-uint16_t read_word(void);
-uint8_t peak_byte(void);
-void push_stack(uint16_t val);
-uint16_t pop_stack(void);
 
 void init(void);
 void load_opcodes(void);

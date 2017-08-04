@@ -11,17 +11,20 @@ SOURCE_FILES= \
 $(SOURCE_DIR)/registers.c \
 $(SOURCE_DIR)/mmu.c \
 $(SOURCE_DIR)/utils.c \
-$(SOURCE_DIR)/vram.c
+$(SOURCE_DIR)/vram.c \
+$(SOURCE_DIR)/helpers_op.c
 
 TEST_FILES= \
 $(TEST_DIR)/helpers.c \
 $(TEST_DIR)/cpu_tests.c
 
-all:
+all: main
+
+main:
 	gcc-7 -g -I$(HEADER_DIR) $(SOURCE_FILES) $(SOURCE_DIR)/main.c -lSDL2 -lSDL2_image -o main $(CFLAGS)
 
-test:
-	gcc-7 -I$(HEADER_DIR) -I$(HEADER_TEST_DIR) $(SOURCE_DIR)/registers.c $(SOURCE_DIR)/mmu.c $(SOURCE_DIR)/utils.c $(TEST_FILES) -lcunit -o test $(CFLAGS)
+test: main
+	gcc-7 -I$(HEADER_DIR) -I$(HEADER_TEST_DIR) $(SOURCE_DIR)/registers.c $(SOURCE_DIR)/mmu.c $(SOURCE_DIR)/utils.c $(SOURCE_DIR)/helpers_op.c $(TEST_FILES) -lcunit -o test $(CFLAGS)
 	./test
 
 clean:
@@ -33,4 +36,4 @@ clean:
 	$(RM) -r .DS_STORE
 	$(RM) -r *.dSYM
 
-.PHONY: clean
+.PHONY: clean all

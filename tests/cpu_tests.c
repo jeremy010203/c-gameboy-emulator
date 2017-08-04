@@ -90,6 +90,67 @@ void test0x3C(void)
   test_inc_half(0x3C, &r.AF.bytes.high, LAMBDA(void _(void) {}));
 }
 
+// ADD A,B
+void test0x80(void)
+{
+  // normal test
+  test_8(0x80,
+    LAMBDA(void _(void) {
+      r.AF.val = 0;
+      r.BC.val = 0xFF00;
+    }),
+    LAMBDA(void _(void) {
+      CU_ASSERT(r.AF.val == 0xFF00);
+      CU_ASSERT(r.BC.val == 0xFF00);
+      CU_ASSERT(r.DE.val == 0);
+      CU_ASSERT(r.HL.val == 0);
+      CU_ASSERT(r.SP.val == 0);
+      CU_ASSERT(r.PC.val == 1);
+      CU_ASSERT(my_clock.t == 4);
+      CU_ASSERT(my_clock.m == 1);
+      CU_ASSERT(check_flags(0, 0, 0, 0));
+    })
+  );
+
+  // half carry test
+  test_8(0x80,
+    LAMBDA(void _(void) {
+      r.AF.val = 0x0100;
+      r.BC.val = 0x0F00;
+    }),
+    LAMBDA(void _(void) {
+      CU_ASSERT(r.AF.bytes.high == 0x10);
+      CU_ASSERT(r.BC.val == 0x0F00);
+      CU_ASSERT(r.DE.val == 0);
+      CU_ASSERT(r.HL.val == 0);
+      CU_ASSERT(r.SP.val == 0);
+      CU_ASSERT(r.PC.val == 1);
+      CU_ASSERT(my_clock.t == 4);
+      CU_ASSERT(my_clock.m == 1);
+      CU_ASSERT(check_flags(0, 0, 1, 0));
+    })
+  );
+
+  // carry test
+  test_8(0x80,
+    LAMBDA(void _(void) {
+      r.AF.val = 0x0100;
+      r.BC.val = 0xFF00;
+    }),
+    LAMBDA(void _(void) {
+      CU_ASSERT(r.AF.bytes.high == 0);
+      CU_ASSERT(r.BC.val == 0xFF00);
+      CU_ASSERT(r.DE.val == 0);
+      CU_ASSERT(r.HL.val == 0);
+      CU_ASSERT(r.SP.val == 0);
+      CU_ASSERT(r.PC.val == 1);
+      CU_ASSERT(my_clock.t == 4);
+      CU_ASSERT(my_clock.m == 1);
+      CU_ASSERT(check_flags(1, 0, 1, 1));
+    })
+  );
+}
+
 int main(void)
 {
   CU_pSuite pSuite = NULL;
@@ -109,7 +170,8 @@ int main(void)
     || (NULL == CU_add_test(pSuite, "test of 0x24", test0x24))
     || (NULL == CU_add_test(pSuite, "test of 0x2C", test0x2C))
     || (NULL == CU_add_test(pSuite, "test of 0x34", test0x34))
-    || (NULL == CU_add_test(pSuite, "test of 0x3C", test0x3C)))
+    || (NULL == CU_add_test(pSuite, "test of 0x3C", test0x3C))
+    || (NULL == CU_add_test(pSuite, "test of ADD A, 8bits registers 0x80", test0x80)))
   {
     CU_cleanup_registry();
     return CU_get_error();
