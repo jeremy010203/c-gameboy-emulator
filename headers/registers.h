@@ -3,6 +3,7 @@
 
 #include <stdlib.h>
 #include <stdio.h>
+#include "helpers_op.h"
 
 struct RegisterByte
 {
@@ -46,7 +47,7 @@ Registers r;
 
 void init_registers(void);
 void print_r(void);
-int test_bit(uint8_t byte, uint8_t index);
+int test_bit(const uint8_t byte, const uint8_t index);
 
 void setZ(void);
 void resetZ(void);
@@ -124,7 +125,5 @@ void loadad(void);
 void loadae(void);
 void loadah(void);
 void loadal(void);
-
-void bit7h(void);
 
 #endif /* REGISTERS_H */

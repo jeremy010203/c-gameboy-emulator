@@ -24,5 +24,7 @@ void cp_op(const uint8_t first, const uint8_t second);
 void and_op(uint8_t *first, const uint8_t second);
 void or_op(uint8_t *first, const uint8_t second);
 void ret_cond_op(int cond);
+void load(uint8_t* to, const uint8_t from);
+void bit_op(const uint8_t reg, const uint8_t pos);
 
 #endif /* HELPERS_OP_H */

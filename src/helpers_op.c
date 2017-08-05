@@ -55,7 +55,7 @@ void inc_op(uint8_t *reg)
 void dec_op(uint8_t *reg)
 {
   uint8_t result = *reg - 1;
-  *reg == 0 ? setC() : resetC();
+  //*reg == 0 ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
   ((*reg & 0xF) - (uint8_t)1) < 0 ? setH() : resetH();
@@ -109,7 +109,7 @@ void swap_op(uint8_t *reg)
 void add_8_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = *first + second;
-  ((uint16_t)*first + (uint16_t)second > 255) ? setC() : resetC();
+  (((uint16_t)*first + (uint16_t)second) > 255) ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
   (((*first & 0xF) + (second & 0xF)) & 0x10) ? setH() : resetH();
@@ -202,4 +202,26 @@ void ret_cond_op(int cond)
   }
 
   my_clock.m = 1;
+}
+
+void load(uint8_t* to, const uint8_t from)
+{
+  if (!to)
+  {
+    printf("Error load -> (to:%p)", to);
+    exit(1);
+  }
+  *to = from;
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+void bit_op(const uint8_t reg, const uint8_t pos)
+{
+  !test_bit(reg, pos) ? setZ() : resetZ();
+  resetN();
+  setH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
 }
