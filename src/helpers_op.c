@@ -225,3 +225,39 @@ void bit_op(const uint8_t reg, const uint8_t pos)
   my_clock.m = 2;
   my_clock.t = 8;
 }
+
+void res_op(uint8_t *reg, const uint8_t pos)
+{
+  *reg &= ~(1 << pos);
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void set_op(uint8_t *reg, const uint8_t pos)
+{
+  *reg |= (1 << pos);
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void sla_op(uint8_t *reg)
+{
+  *reg >> 7 ? setC() : resetC();
+  *reg <<= 1;
+  *reg == 0 ? setZ() : resetZ();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void srl_op(uint8_t *reg)
+{
+  ((*reg << 7) >> 7) ? setC() : resetC();
+  *reg >>= 1;
+  *reg == 0 ? setZ() : resetZ();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}

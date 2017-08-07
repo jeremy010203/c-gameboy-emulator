@@ -61,7 +61,7 @@ void prefixcb(void)
     uint8_t op = read_byte();
     if (!PrefixCB[op])
     {
-      fprintf(stderr, "Unknown Prefix Op: %x", op);
+      fprintf(stderr, "Unknown Prefix Op: 0x%x at 0x%x", op, r.PC.val - 1);
       exit(1);
     }
     PrefixCB[op]();
@@ -179,6 +179,54 @@ void opcode_0x34(void)
   my_clock.t = 12;
 }
 
+// LD (HL), B
+void opcode_0x70(void)
+{
+  write_memory(r.HL.val, r.BC.bytes.high);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (HL), C
+void opcode_0x71(void)
+{
+  write_memory(r.HL.val, r.BC.bytes.low);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (HL), D
+void opcode_0x72(void)
+{
+  write_memory(r.HL.val, r.DE.bytes.high);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (HL), E
+void opcode_0x73(void)
+{
+  write_memory(r.HL.val, r.DE.bytes.low);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (HL), H
+void opcode_0x74(void)
+{
+  write_memory(r.HL.val, r.HL.bytes.high);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
+// LD (HL), L
+void opcode_0x75(void)
+{
+  write_memory(r.HL.val, r.HL.bytes.low);
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+
 // LD (HL), A
 void opcode_0x77(void)
 {
@@ -283,6 +331,7 @@ void opcode_0x86(void)
   my_clock.t = 8;
 }
 void opcode_0x87(void) { add_8_op(&r.AF.bytes.high, r.AF.bytes.high); }
+void opcode_0xc6(void) { add_8_op(&r.AF.bytes.high, read_byte()); }
 
 // SUB OPS
 void opcode_0x90(void) { sub_8_op(&r.AF.bytes.high, r.BC.bytes.high); }
@@ -298,6 +347,7 @@ void opcode_0x96(void)
   my_clock.t = 8;
 }
 void opcode_0x97(void) { sub_8_op(&r.AF.bytes.high, r.AF.bytes.high); }
+void opcode_0xd6(void) { sub_8_op(&r.AF.bytes.high, read_byte()); }
 
 // XOR OPS
 void opcode_0xa8(void) { xor_8_op(&r.AF.bytes.high, r.BC.bytes.high); }
@@ -313,6 +363,7 @@ void opcode_0xae(void)
   my_clock.t = 8;
 }
 void opcode_0xaf(void) { xor_8_op(&r.AF.bytes.high, r.AF.bytes.high); }
+void opcode_0xee(void) { xor_8_op(&r.AF.bytes.high, read_byte()); }
 
 // AND OPS
 void opcode_0xe6(void)
@@ -407,6 +458,15 @@ void opcode_0xc3(void)
   my_clock.t = 16;
 }
 
+// JP (HL) -> special behaviour!! :( means that PC = HL
+void opcode_0xe9(void)
+{
+  r.PC.val = r.HL.val;
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 // JP Z, a16
 void opcode_0xca(void)
 {
@@ -481,7 +541,7 @@ void opcode_0x18(void)
   my_clock.t = 12;
 }
 
-// JR Z,r8
+// JR Z, r8
 void opcode_0x28(void)
 {
   int8_t addr = read_byte();
@@ -656,13 +716,13 @@ void opcode_0x2f(void)
 
 // RST OPS
 void opcode_0xc7(void) { rst_op(0); }
-void opcode_0xcf(void) { rst_op(0x0800); }
-void opcode_0xd7(void) { rst_op(0x1000); }
-void opcode_0xdf(void) { rst_op(0x1800); }
-void opcode_0xe7(void) { rst_op(0x2000); }
-void opcode_0xef(void) { rst_op(0x2800); }
-void opcode_0xf7(void) { rst_op(0x3000); }
-void opcode_0xff(void) { rst_op(0x3800); }
+void opcode_0xcf(void) { rst_op(0x08); }
+void opcode_0xd7(void) { rst_op(0x10); }
+void opcode_0xdf(void) { rst_op(0x18); }
+void opcode_0xe7(void) { rst_op(0x20); }
+void opcode_0xef(void) { rst_op(0x28); }
+void opcode_0xf7(void) { rst_op(0x30); }
+void opcode_0xff(void) { rst_op(0x38); }
 
 // LD C, (HL)
 void opcode_0x4e(void)
@@ -696,6 +756,27 @@ void opcode_0x7e(void)
   my_clock.t = 8;
 }
 
+// DAA
+void opcode_0x27(void)
+{
+  uint8_t old_a = r.AF.bytes.high;
+  if (getH() || ((r.AF.bytes.high & 15) > 9))
+    r.AF.bytes.high += 6;
+
+  resetC();
+  if (getH() || (old_a > 0x99))
+  {
+    r.AF.bytes.high += 0x60;
+    setC();
+  }
+
+  resetH();
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 void prefix_0x11(void)
 {
   uint8_t old_c = (r.BC.bytes.low & 0b10000000) >> 7;
@@ -712,6 +793,16 @@ void prefix_0x11(void)
   my_clock.t = 8;
 }
 
+// SLA OPS
+void prefix_0x20(void) { sla_op(&r.BC.bytes.high); }
+void prefix_0x21(void) { sla_op(&r.BC.bytes.low); }
+void prefix_0x22(void) { sla_op(&r.DE.bytes.high); }
+void prefix_0x23(void) { sla_op(&r.DE.bytes.low); }
+void prefix_0x24(void) { sla_op(&r.HL.bytes.high); }
+void prefix_0x25(void) { sla_op(&r.HL.bytes.low); }
+void prefix_0x26(void) { sla_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x27(void) { sla_op(&r.AF.bytes.high); }
+
 // SWAP OPS
 void prefix_0x30(void) { swap_op(&r.BC.bytes.high); }
 void prefix_0x31(void) { swap_op(&r.BC.bytes.low); }
@@ -723,9 +814,9 @@ void prefix_0x35(void) { swap_op(&r.HL.bytes.low); }
 // SWAP (HL)
 void prefix_0x36(void)
 {
-  uint8_t high = read_memory(r.HL.val) >> 4;
-  write_memory(r.HL.val, read_memory(r.HL.val) << 4);
-  write_memory(r.HL.val, read_memory(r.HL.val) + high);
+  uint8_t high = read_memory(r.HL.val) << 4;
+  uint8_t low  = read_memory(r.HL.val) >> 4;
+  write_memory(r.HL.val, high + low);
 
   read_memory(r.HL.val) == 0 ? setZ() : resetZ();
   resetC();
@@ -738,6 +829,16 @@ void prefix_0x36(void)
 
 // SWAP A
 void prefix_0x37(void) { swap_op(&r.AF.bytes.high); }
+
+// SLR OPS
+void prefix_0x38(void) { srl_op(&r.BC.bytes.high); }
+void prefix_0x39(void) { srl_op(&r.BC.bytes.low); }
+void prefix_0x3a(void) { srl_op(&r.DE.bytes.high); }
+void prefix_0x3b(void) { srl_op(&r.DE.bytes.low); }
+void prefix_0x3c(void) { srl_op(&r.HL.bytes.high); }
+void prefix_0x3d(void) { srl_op(&r.HL.bytes.low); }
+void prefix_0x3e(void) { srl_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x3f(void) { srl_op(&r.AF.bytes.high); }
 
 // BIT PREFIX OPS
 void prefix_0x40(void) { bit_op(r.BC.bytes.high, 0); }
@@ -805,6 +906,138 @@ void prefix_0x7d(void) { bit_op(r.HL.bytes.low, 7); }
 void prefix_0x7e(void) { bit_op(read_memory(r.HL.val), 7); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x7f(void) { bit_op(r.AF.bytes.high, 7); }
 
+// RES PREFIX OPS
+void prefix_0x80(void) { res_op(&r.BC.bytes.high, 0); }
+void prefix_0x81(void) { res_op(&r.BC.bytes.low, 0); }
+void prefix_0x82(void) { res_op(&r.DE.bytes.high, 0); }
+void prefix_0x83(void) { res_op(&r.DE.bytes.low, 0); }
+void prefix_0x84(void) { res_op(&r.HL.bytes.high, 0); }
+void prefix_0x85(void) { res_op(&r.HL.bytes.low, 0); }
+void prefix_0x86(void) { res_op(&MMU.memory[r.HL.val], 0); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x87(void) { res_op(&r.AF.bytes.high, 0); }
+void prefix_0x88(void) { res_op(&r.BC.bytes.high, 1); }
+void prefix_0x89(void) { res_op(&r.BC.bytes.low, 1); }
+void prefix_0x8a(void) { res_op(&r.DE.bytes.high, 1); }
+void prefix_0x8b(void) { res_op(&r.DE.bytes.low, 1); }
+void prefix_0x8c(void) { res_op(&r.HL.bytes.high, 1); }
+void prefix_0x8d(void) { res_op(&r.HL.bytes.low, 1); }
+void prefix_0x8e(void) { res_op(&MMU.memory[r.HL.val], 1); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x8f(void) { res_op(&r.AF.bytes.high, 1); }
+void prefix_0x90(void) { res_op(&r.BC.bytes.high, 2); }
+void prefix_0x91(void) { res_op(&r.BC.bytes.low, 2); }
+void prefix_0x92(void) { res_op(&r.DE.bytes.high, 2); }
+void prefix_0x93(void) { res_op(&r.DE.bytes.low, 2); }
+void prefix_0x94(void) { res_op(&r.HL.bytes.high, 2); }
+void prefix_0x95(void) { res_op(&r.HL.bytes.low, 2); }
+void prefix_0x96(void) { res_op(&MMU.memory[r.HL.val], 2); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x97(void) { res_op(&r.AF.bytes.high, 2); }
+void prefix_0x98(void) { res_op(&r.BC.bytes.high, 3); }
+void prefix_0x99(void) { res_op(&r.BC.bytes.low, 3); }
+void prefix_0x9a(void) { res_op(&r.DE.bytes.high, 3); }
+void prefix_0x9b(void) { res_op(&r.DE.bytes.low, 3); }
+void prefix_0x9c(void) { res_op(&r.HL.bytes.high, 3); }
+void prefix_0x9d(void) { res_op(&r.HL.bytes.low, 3); }
+void prefix_0x9e(void) { res_op(&MMU.memory[r.HL.val], 3); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x9f(void) { res_op(&r.AF.bytes.high, 3); }
+void prefix_0xa0(void) { res_op(&r.BC.bytes.high, 4); }
+void prefix_0xa1(void) { res_op(&r.BC.bytes.low, 4); }
+void prefix_0xa2(void) { res_op(&r.DE.bytes.high, 4); }
+void prefix_0xa3(void) { res_op(&r.DE.bytes.low, 4); }
+void prefix_0xa4(void) { res_op(&r.HL.bytes.high, 4); }
+void prefix_0xa5(void) { res_op(&r.HL.bytes.low, 4); }
+void prefix_0xa6(void) { res_op(&MMU.memory[r.HL.val], 4); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xa7(void) { res_op(&r.AF.bytes.high, 4); }
+void prefix_0xa8(void) { res_op(&r.BC.bytes.high, 5); }
+void prefix_0xa9(void) { res_op(&r.BC.bytes.low, 5); }
+void prefix_0xaa(void) { res_op(&r.DE.bytes.high, 5); }
+void prefix_0xab(void) { res_op(&r.DE.bytes.low, 5); }
+void prefix_0xac(void) { res_op(&r.HL.bytes.high, 5); }
+void prefix_0xad(void) { res_op(&r.HL.bytes.low, 5); }
+void prefix_0xae(void) { res_op(&MMU.memory[r.HL.val], 5); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xaf(void) { res_op(&r.AF.bytes.high, 5); }
+void prefix_0xb0(void) { res_op(&r.BC.bytes.high, 6); }
+void prefix_0xb1(void) { res_op(&r.BC.bytes.low, 6); }
+void prefix_0xb2(void) { res_op(&r.DE.bytes.high, 6); }
+void prefix_0xb3(void) { res_op(&r.DE.bytes.low, 6); }
+void prefix_0xb4(void) { res_op(&r.HL.bytes.high, 6); }
+void prefix_0xb5(void) { res_op(&r.HL.bytes.low, 6); }
+void prefix_0xb6(void) { res_op(&MMU.memory[r.HL.val], 6); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xb7(void) { res_op(&r.AF.bytes.high, 6); }
+void prefix_0xb8(void) { res_op(&r.BC.bytes.high, 7); }
+void prefix_0xb9(void) { res_op(&r.BC.bytes.low, 7); }
+void prefix_0xba(void) { res_op(&r.DE.bytes.high, 7); }
+void prefix_0xbb(void) { res_op(&r.DE.bytes.low, 7); }
+void prefix_0xbc(void) { res_op(&r.HL.bytes.high, 7); }
+void prefix_0xbd(void) { res_op(&r.HL.bytes.low, 7); }
+void prefix_0xbe(void) { res_op(&MMU.memory[r.HL.val], 7); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xbf(void) { res_op(&r.AF.bytes.high, 7); }
+
+// SET PREFIX OPS
+void prefix_0xc0(void) { set_op(&r.BC.bytes.high, 0); }
+void prefix_0xc1(void) { set_op(&r.BC.bytes.low, 0); }
+void prefix_0xc2(void) { set_op(&r.DE.bytes.high, 0); }
+void prefix_0xc3(void) { set_op(&r.DE.bytes.low, 0); }
+void prefix_0xc4(void) { set_op(&r.HL.bytes.high, 0); }
+void prefix_0xc5(void) { set_op(&r.HL.bytes.low, 0); }
+void prefix_0xc6(void) { set_op(&MMU.memory[r.HL.val], 0); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xc7(void) { set_op(&r.AF.bytes.high, 0); }
+void prefix_0xc8(void) { set_op(&r.BC.bytes.high, 1); }
+void prefix_0xc9(void) { set_op(&r.BC.bytes.low, 1); }
+void prefix_0xca(void) { set_op(&r.DE.bytes.high, 1); }
+void prefix_0xcb(void) { set_op(&r.DE.bytes.low, 1); }
+void prefix_0xcc(void) { set_op(&r.HL.bytes.high, 1); }
+void prefix_0xcd(void) { set_op(&r.HL.bytes.low, 1); }
+void prefix_0xce(void) { set_op(&MMU.memory[r.HL.val], 1); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xcf(void) { set_op(&r.AF.bytes.high, 1); }
+void prefix_0xd0(void) { set_op(&r.BC.bytes.high, 2); }
+void prefix_0xd1(void) { set_op(&r.BC.bytes.low, 2); }
+void prefix_0xd2(void) { set_op(&r.DE.bytes.high, 2); }
+void prefix_0xd3(void) { set_op(&r.DE.bytes.low, 2); }
+void prefix_0xd4(void) { set_op(&r.HL.bytes.high, 2); }
+void prefix_0xd5(void) { set_op(&r.HL.bytes.low, 2); }
+void prefix_0xd6(void) { set_op(&MMU.memory[r.HL.val], 2); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xd7(void) { set_op(&r.AF.bytes.high, 2); }
+void prefix_0xd8(void) { set_op(&r.BC.bytes.high, 3); }
+void prefix_0xd9(void) { set_op(&r.BC.bytes.low, 3); }
+void prefix_0xda(void) { set_op(&r.DE.bytes.high, 3); }
+void prefix_0xdb(void) { set_op(&r.DE.bytes.low, 3); }
+void prefix_0xdc(void) { set_op(&r.HL.bytes.high, 3); }
+void prefix_0xdd(void) { set_op(&r.HL.bytes.low, 3); }
+void prefix_0xde(void) { set_op(&MMU.memory[r.HL.val], 3); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xdf(void) { set_op(&r.AF.bytes.high, 3); }
+void prefix_0xe0(void) { set_op(&r.BC.bytes.high, 4); }
+void prefix_0xe1(void) { set_op(&r.BC.bytes.low, 4); }
+void prefix_0xe2(void) { set_op(&r.DE.bytes.high, 4); }
+void prefix_0xe3(void) { set_op(&r.DE.bytes.low, 4); }
+void prefix_0xe4(void) { set_op(&r.HL.bytes.high, 4); }
+void prefix_0xe5(void) { set_op(&r.HL.bytes.low, 4); }
+void prefix_0xe6(void) { set_op(&MMU.memory[r.HL.val], 4); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xe7(void) { set_op(&r.AF.bytes.high, 4); }
+void prefix_0xe8(void) { set_op(&r.BC.bytes.high, 5); }
+void prefix_0xe9(void) { set_op(&r.BC.bytes.low, 5); }
+void prefix_0xea(void) { set_op(&r.DE.bytes.high, 5); }
+void prefix_0xeb(void) { set_op(&r.DE.bytes.low, 5); }
+void prefix_0xec(void) { set_op(&r.HL.bytes.high, 5); }
+void prefix_0xed(void) { set_op(&r.HL.bytes.low, 5); }
+void prefix_0xee(void) { set_op(&MMU.memory[r.HL.val], 5); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xef(void) { set_op(&r.AF.bytes.high, 5); }
+void prefix_0xf0(void) { set_op(&r.BC.bytes.high, 6); }
+void prefix_0xf1(void) { set_op(&r.BC.bytes.low, 6); }
+void prefix_0xf2(void) { set_op(&r.DE.bytes.high, 6); }
+void prefix_0xf3(void) { set_op(&r.DE.bytes.low, 6); }
+void prefix_0xf4(void) { set_op(&r.HL.bytes.high, 6); }
+void prefix_0xf5(void) { set_op(&r.HL.bytes.low, 6); }
+void prefix_0xf6(void) { set_op(&MMU.memory[r.HL.val], 6); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xf7(void) { set_op(&r.AF.bytes.high, 6); }
+void prefix_0xf8(void) { set_op(&r.BC.bytes.high, 7); }
+void prefix_0xf9(void) { set_op(&r.BC.bytes.low, 7); }
+void prefix_0xfa(void) { set_op(&r.DE.bytes.high, 7); }
+void prefix_0xfb(void) { set_op(&r.DE.bytes.low, 7); }
+void prefix_0xfc(void) { set_op(&r.HL.bytes.high, 7); }
+void prefix_0xfd(void) { set_op(&r.HL.bytes.low, 7); }
+void prefix_0xfe(void) { set_op(&MMU.memory[r.HL.val], 7); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0xff(void) { set_op(&r.AF.bytes.high, 7); }
+
 void load_opcodes(void)
 {
   Opcodes[0x00] = &opcode_0x00;
@@ -844,6 +1077,7 @@ void load_opcodes(void)
   Opcodes[0x24] = &opcode_0x24;
   Opcodes[0x25] = &opcode_0x25;
   Opcodes[0x26] = &opcode_0x26;
+  Opcodes[0x27] = &opcode_0x27;
   Opcodes[0x28] = &opcode_0x28;
   Opcodes[0x29] = &opcode_0x29;
   Opcodes[0x2A] = &opcode_0x2a;
@@ -919,6 +1153,12 @@ void load_opcodes(void)
   Opcodes[0x6E] = &opcode_0x6e;
   Opcodes[0x6F] = &loadla;
 
+  Opcodes[0x70] = &opcode_0x70;
+  Opcodes[0x71] = &opcode_0x71;
+  Opcodes[0x72] = &opcode_0x72;
+  Opcodes[0x73] = &opcode_0x73;
+  Opcodes[0x74] = &opcode_0x74;
+  Opcodes[0x75] = &opcode_0x75;
   Opcodes[0x77] = &opcode_0x77;
   Opcodes[0x78] = &loadab;
   Opcodes[0x79] = &loadac;
@@ -994,6 +1234,7 @@ void load_opcodes(void)
   Opcodes[0xC2] = &opcode_0xc2;
   Opcodes[0xC3] = &opcode_0xc3;
   Opcodes[0xC5] = &opcode_0xc5;
+  Opcodes[0xC6] = &opcode_0xc6;
   Opcodes[0xC7] = &opcode_0xc7;
   Opcodes[0xC8] = &opcode_0xc8;
   Opcodes[0xC9] = &opcode_0xc9;
@@ -1008,6 +1249,7 @@ void load_opcodes(void)
   Opcodes[0xD1] = &opcode_0xd1;
   Opcodes[0xD2] = &opcode_0xd2;
   Opcodes[0xD5] = &opcode_0xd5;
+  Opcodes[0xD6] = &opcode_0xd6;
   Opcodes[0xD7] = &opcode_0xd7;
   Opcodes[0xD8] = &opcode_0xd8;
   Opcodes[0xD9] = &opcode_0xd9;
@@ -1020,7 +1262,9 @@ void load_opcodes(void)
   Opcodes[0xE5] = &opcode_0xe5;
   Opcodes[0xE6] = &opcode_0xe6;
   Opcodes[0xE7] = &opcode_0xe7;
+  Opcodes[0xE9] = &opcode_0xe9;
   Opcodes[0xEA] = &opcode_0xea;
+  Opcodes[0xEE] = &opcode_0xee;
   Opcodes[0xEF] = &opcode_0xef;
 
   Opcodes[0xF0] = &opcode_0xf0;
@@ -1039,6 +1283,15 @@ void load_prefixcb(void)
 {
   PrefixCB[0x11] = &prefix_0x11;
 
+  PrefixCB[0x20] = &prefix_0x20;
+  PrefixCB[0x21] = &prefix_0x21;
+  PrefixCB[0x22] = &prefix_0x22;
+  PrefixCB[0x23] = &prefix_0x23;
+  PrefixCB[0x24] = &prefix_0x24;
+  PrefixCB[0x25] = &prefix_0x25;
+  PrefixCB[0x26] = &prefix_0x26;
+  PrefixCB[0x27] = &prefix_0x27;
+
   PrefixCB[0x30] = &prefix_0x30;
   PrefixCB[0x31] = &prefix_0x31;
   PrefixCB[0x32] = &prefix_0x32;
@@ -1047,6 +1300,14 @@ void load_prefixcb(void)
   PrefixCB[0x35] = &prefix_0x35;
   PrefixCB[0x36] = &prefix_0x36;
   PrefixCB[0x37] = &prefix_0x37;
+  PrefixCB[0x38] = &prefix_0x38;
+  PrefixCB[0x39] = &prefix_0x39;
+  PrefixCB[0x3a] = &prefix_0x3a;
+  PrefixCB[0x3b] = &prefix_0x3b;
+  PrefixCB[0x3c] = &prefix_0x3c;
+  PrefixCB[0x3d] = &prefix_0x3d;
+  PrefixCB[0x3e] = &prefix_0x3e;
+  PrefixCB[0x3f] = &prefix_0x3f;
 
   PrefixCB[0x40] = &prefix_0x40;
   PrefixCB[0x41] = &prefix_0x41;
@@ -1115,6 +1376,142 @@ void load_prefixcb(void)
   PrefixCB[0x7D] = &prefix_0x7d;
   PrefixCB[0x7E] = &prefix_0x7e;
   PrefixCB[0x7F] = &prefix_0x7f;
+
+  PrefixCB[0x80] = &prefix_0x80;
+  PrefixCB[0x81] = &prefix_0x81;
+  PrefixCB[0x82] = &prefix_0x82;
+  PrefixCB[0x83] = &prefix_0x83;
+  PrefixCB[0x84] = &prefix_0x84;
+  PrefixCB[0x85] = &prefix_0x85;
+  PrefixCB[0x86] = &prefix_0x86;
+  PrefixCB[0x87] = &prefix_0x87;
+  PrefixCB[0x88] = &prefix_0x88;
+  PrefixCB[0x89] = &prefix_0x89;
+  PrefixCB[0x8A] = &prefix_0x8a;
+  PrefixCB[0x8B] = &prefix_0x8b;
+  PrefixCB[0x8C] = &prefix_0x8c;
+  PrefixCB[0x8D] = &prefix_0x8d;
+  PrefixCB[0x8E] = &prefix_0x8e;
+  PrefixCB[0x8F] = &prefix_0x8f;
+
+  PrefixCB[0x90] = &prefix_0x90;
+  PrefixCB[0x91] = &prefix_0x91;
+  PrefixCB[0x92] = &prefix_0x92;
+  PrefixCB[0x93] = &prefix_0x93;
+  PrefixCB[0x94] = &prefix_0x94;
+  PrefixCB[0x95] = &prefix_0x95;
+  PrefixCB[0x96] = &prefix_0x96;
+  PrefixCB[0x97] = &prefix_0x97;
+  PrefixCB[0x98] = &prefix_0x98;
+  PrefixCB[0x99] = &prefix_0x99;
+  PrefixCB[0x9A] = &prefix_0x9a;
+  PrefixCB[0x9B] = &prefix_0x9b;
+  PrefixCB[0x9C] = &prefix_0x9c;
+  PrefixCB[0x9D] = &prefix_0x9d;
+  PrefixCB[0x9E] = &prefix_0x9e;
+  PrefixCB[0x9F] = &prefix_0x9f;
+
+  PrefixCB[0xa0] = &prefix_0xa0;
+  PrefixCB[0xa1] = &prefix_0xa1;
+  PrefixCB[0xa2] = &prefix_0xa2;
+  PrefixCB[0xa3] = &prefix_0xa3;
+  PrefixCB[0xa4] = &prefix_0xa4;
+  PrefixCB[0xa5] = &prefix_0xa5;
+  PrefixCB[0xa6] = &prefix_0xa6;
+  PrefixCB[0xa7] = &prefix_0xa7;
+  PrefixCB[0xa8] = &prefix_0xa8;
+  PrefixCB[0xa9] = &prefix_0xa9;
+  PrefixCB[0xaA] = &prefix_0xaa;
+  PrefixCB[0xaB] = &prefix_0xab;
+  PrefixCB[0xaC] = &prefix_0xac;
+  PrefixCB[0xaD] = &prefix_0xad;
+  PrefixCB[0xaE] = &prefix_0xae;
+  PrefixCB[0xaF] = &prefix_0xaf;
+
+  PrefixCB[0xb0] = &prefix_0xb0;
+  PrefixCB[0xb1] = &prefix_0xb1;
+  PrefixCB[0xb2] = &prefix_0xb2;
+  PrefixCB[0xb3] = &prefix_0xb3;
+  PrefixCB[0xb4] = &prefix_0xb4;
+  PrefixCB[0xb5] = &prefix_0xb5;
+  PrefixCB[0xb6] = &prefix_0xb6;
+  PrefixCB[0xb7] = &prefix_0xb7;
+  PrefixCB[0xb8] = &prefix_0xb8;
+  PrefixCB[0xb9] = &prefix_0xb9;
+  PrefixCB[0xbA] = &prefix_0xba;
+  PrefixCB[0xbB] = &prefix_0xbb;
+  PrefixCB[0xbC] = &prefix_0xbc;
+  PrefixCB[0xbD] = &prefix_0xbd;
+  PrefixCB[0xbE] = &prefix_0xbe;
+  PrefixCB[0xbF] = &prefix_0xbf;
+
+  PrefixCB[0xc0] = &prefix_0xc0;
+  PrefixCB[0xc1] = &prefix_0xc1;
+  PrefixCB[0xc2] = &prefix_0xc2;
+  PrefixCB[0xc3] = &prefix_0xc3;
+  PrefixCB[0xc4] = &prefix_0xc4;
+  PrefixCB[0xc5] = &prefix_0xc5;
+  PrefixCB[0xc6] = &prefix_0xc6;
+  PrefixCB[0xc7] = &prefix_0xc7;
+  PrefixCB[0xc8] = &prefix_0xc8;
+  PrefixCB[0xc9] = &prefix_0xc9;
+  PrefixCB[0xcA] = &prefix_0xca;
+  PrefixCB[0xcB] = &prefix_0xcb;
+  PrefixCB[0xcC] = &prefix_0xcc;
+  PrefixCB[0xcD] = &prefix_0xcd;
+  PrefixCB[0xcE] = &prefix_0xce;
+  PrefixCB[0xcF] = &prefix_0xcf;
+
+  PrefixCB[0xd0] = &prefix_0xd0;
+  PrefixCB[0xd1] = &prefix_0xd1;
+  PrefixCB[0xd2] = &prefix_0xd2;
+  PrefixCB[0xd3] = &prefix_0xd3;
+  PrefixCB[0xd4] = &prefix_0xd4;
+  PrefixCB[0xd5] = &prefix_0xd5;
+  PrefixCB[0xd6] = &prefix_0xd6;
+  PrefixCB[0xd7] = &prefix_0xd7;
+  PrefixCB[0xd8] = &prefix_0xd8;
+  PrefixCB[0xd9] = &prefix_0xd9;
+  PrefixCB[0xdA] = &prefix_0xda;
+  PrefixCB[0xdB] = &prefix_0xdb;
+  PrefixCB[0xdC] = &prefix_0xdc;
+  PrefixCB[0xdD] = &prefix_0xdd;
+  PrefixCB[0xdE] = &prefix_0xde;
+  PrefixCB[0xdF] = &prefix_0xdf;
+
+  PrefixCB[0xe0] = &prefix_0xe0;
+  PrefixCB[0xe1] = &prefix_0xe1;
+  PrefixCB[0xe2] = &prefix_0xe2;
+  PrefixCB[0xe3] = &prefix_0xe3;
+  PrefixCB[0xe4] = &prefix_0xe4;
+  PrefixCB[0xe5] = &prefix_0xe5;
+  PrefixCB[0xe6] = &prefix_0xe6;
+  PrefixCB[0xe7] = &prefix_0xe7;
+  PrefixCB[0xe8] = &prefix_0xe8;
+  PrefixCB[0xe9] = &prefix_0xe9;
+  PrefixCB[0xeA] = &prefix_0xea;
+  PrefixCB[0xeB] = &prefix_0xeb;
+  PrefixCB[0xeC] = &prefix_0xec;
+  PrefixCB[0xeD] = &prefix_0xed;
+  PrefixCB[0xeE] = &prefix_0xee;
+  PrefixCB[0xeF] = &prefix_0xef;
+
+  PrefixCB[0xf0] = &prefix_0xf0;
+  PrefixCB[0xf1] = &prefix_0xf1;
+  PrefixCB[0xf2] = &prefix_0xf2;
+  PrefixCB[0xf3] = &prefix_0xf3;
+  PrefixCB[0xf4] = &prefix_0xf4;
+  PrefixCB[0xf5] = &prefix_0xf5;
+  PrefixCB[0xf6] = &prefix_0xf6;
+  PrefixCB[0xf7] = &prefix_0xf7;
+  PrefixCB[0xf8] = &prefix_0xf8;
+  PrefixCB[0xf9] = &prefix_0xf9;
+  PrefixCB[0xfA] = &prefix_0xfa;
+  PrefixCB[0xfB] = &prefix_0xfb;
+  PrefixCB[0xfC] = &prefix_0xfc;
+  PrefixCB[0xfD] = &prefix_0xfd;
+  PrefixCB[0xfE] = &prefix_0xfe;
+  PrefixCB[0xfF] = &prefix_0xff;
 }
 
 void my_clock_handling(void)
@@ -1146,6 +1543,7 @@ void my_clock_handling(void)
         my_clock.lineticks = 0;
         write_memory(0xFF44, 0);
         my_clock.total_m  = 0;
+        request_interupt(0);
       }
       else if (my_clock.lineticks >= 456)
       {

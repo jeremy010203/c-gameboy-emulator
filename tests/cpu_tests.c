@@ -270,7 +270,6 @@ void test0xcbBITS(void)
   test_bit_mem(5, 0x6e);
   test_bit_mem(6, 0x76);
   test_bit_mem(7, 0x7e);
-
 }
 
 int main(void)

@@ -84,12 +84,18 @@ uint8_t read_memory(uint16_t addr)
 
 void write_memory(uint16_t addr, uint8_t val)
 {
+  // Read only
+  if ((addr < 0x8000) || ((addr >= 0xFEA0 ) && (addr < 0xFEFF)))
+    return;
+
   // Detect disable boot rom
   if (addr == 0xFF50 && val == 1)
   {
     load_rom("misc/Tetris.gb");
   }
   MMU.memory[addr] = val;
+  if ((addr >= 0xE000 ) && (addr < 0xFE00))
+    write_memory(addr - 0x2000, val);
 }
 
 void request_interupt(uint8_t val)
@@ -112,7 +118,7 @@ void do_interupt(void)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
-            printf("Execute interupt: %u\n", mem);
+            printf("Execute interupt: %u\n", i);
             execute_interupt(i);
           }
         }

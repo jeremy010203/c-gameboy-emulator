@@ -13,6 +13,8 @@ void keyPressed(int key);
 void keyReleased(int key);
 void print_joypad(SDL_Renderer *renderer, SDL_Texture *imgs[], SDL_Rect rects[]);
 
+static int trace = 0;
+
 int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
 {
   for (int i = 0; i < 100; i++)
@@ -37,7 +39,10 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
     while (1)
     {
       uint8_t op = read_byte();
+      if (trace)
+        printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
       execute(op);
+
       if (renderer && read_memory(0xFF44) == 0)
       {
         (*frame)++;
@@ -47,6 +52,7 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
           SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
           SDL_RenderClear(renderer);
           print_tiles(renderer);
+          print_vram(renderer);
           print_joypad(renderer, imgs, rects);
 
           SDL_RenderSetScale(renderer, 2, 2);
@@ -99,6 +105,7 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
         SDL_RenderClear(renderer);
         print_tiles(renderer);
+        print_vram(renderer);
         print_joypad(renderer, imgs, rects);
 
         SDL_RenderSetScale(renderer, 2, 2);
@@ -113,6 +120,7 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
       }
     }
     do_interupt();
+    print_r();
   }
   else if (strcmp(input, "show reg\n") == 0)
   {
@@ -223,6 +231,8 @@ int main(int argc, char *args[])
       debug = 1;
     else if (strcmp(args[i], "--sdl") == 0)
       sdl = 1;
+    else if (strcmp(args[i], "--trace") == 0)
+      trace = 1;
     else
     {
       printf("Unknown arg: %s\n", args[i]);
@@ -245,7 +255,7 @@ int main(int argc, char *args[])
 
   if (sdl)
   {
-    SDL_CreateWindowAndRenderer(160 * 2, 144 * 2 + 100, 0, &pWindow, &renderer);
+    SDL_CreateWindowAndRenderer(480 * 2, 144 * 2 + 100, 0, &pWindow, &renderer);
 
     if (!pWindow || !renderer)
     {
@@ -293,6 +303,7 @@ int main(int argc, char *args[])
           SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
           SDL_RenderClear(renderer);
           print_tiles(renderer);
+          print_vram(renderer);
           print_joypad(renderer, imgs, rects);
 
           SDL_RenderSetScale(renderer, 2, 2);
