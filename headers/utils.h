@@ -4,6 +4,10 @@
 #include "mmu.h"
 #include "registers.h"
 #include "helpers_op.h"
+#include "vram.h"
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_image.h>
+#include <sys/time.h>
 
 enum Op
 {
@@ -47,7 +51,7 @@ enum Op
 void init(void);
 void load_opcodes(void);
 void load_prefixcb(void);
-void execute(uint16_t op);
+void execute(uint16_t op, SDL_Renderer *renderer);
 
 void loadhlpa(void);
 void loadhlma(void);

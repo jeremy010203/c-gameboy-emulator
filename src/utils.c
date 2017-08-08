@@ -1514,7 +1514,9 @@ void load_prefixcb(void)
   PrefixCB[0xfF] = &prefix_0xff;
 }
 
-void my_clock_handling(void)
+static struct timespec start, end;
+
+static void my_clock_handling(SDL_Renderer *renderer)
 {
   my_clock.total_m += my_clock.m;
   my_clock.total_t += my_clock.t;
@@ -1533,6 +1535,7 @@ void my_clock_handling(void)
           my_clock.mode = 2;
         }
         my_clock.lineticks = 0;
+        print_tiles(renderer);
         write_memory(0xFF44, read_memory(0xFF44) + 1);
       }
       break;
@@ -1542,7 +1545,6 @@ void my_clock_handling(void)
         my_clock.mode = 2;
         my_clock.lineticks = 0;
         write_memory(0xFF44, 0);
-        my_clock.total_m  = 0;
         request_interupt(0);
       }
       else if (my_clock.lineticks >= 456)
@@ -1566,9 +1568,31 @@ void my_clock_handling(void)
       }
       break;
   }
+
+  if (my_clock.total_m > 69905)
+  {
+    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+    struct timespec sleep;
+    sleep.tv_sec = 0;
+    // 20ms
+    sleep.tv_nsec = 20000000L - (end.tv_nsec - start.tv_nsec);
+
+    if (sleep.tv_nsec < 20000000L)
+      nanosleep(&sleep, NULL);
+
+    //uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
+
+    my_clock.total_m  = 0;
+
+    SDL_RenderSetScale(renderer, 2, 2);
+    SDL_RenderPresent(renderer);
+
+    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+  }
 }
 
-void execute(uint16_t op)
+void execute(uint16_t op, SDL_Renderer *renderer)
 {
   if (!Opcodes[op])
   {
@@ -1577,5 +1601,5 @@ void execute(uint16_t op)
   }
   Opcodes[op]();
 
-  my_clock_handling();
+  my_clock_handling(renderer);
 }

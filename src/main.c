@@ -41,22 +41,16 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
       uint8_t op = read_byte();
       if (trace)
         printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
-      execute(op);
+      execute(op, renderer);
 
       if (renderer && read_memory(0xFF44) == 0)
       {
         (*frame)++;
         (*event_frame)++;
-        if (*frame % 120 == 0)
+        if (*frame % 60 == 0)
         {
-          SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-          SDL_RenderClear(renderer);
-          print_tiles(renderer);
-          print_vram(renderer);
+          //print_vram(renderer);
           print_joypad(renderer, imgs, rects);
-
-          SDL_RenderSetScale(renderer, 2, 2);
-          SDL_RenderPresent(renderer);
           *frame = 0;
           //SDL_Delay(10);
         }
@@ -95,17 +89,14 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
     printf("%x -> ", r.PC.val);
     uint8_t op = read_byte();
     printf("%x\n", op);
-    execute(op);
+    execute(op, renderer);
     if (renderer && read_memory(0xFF44) == 0)
     {
       (*frame)++;
       (*event_frame)++;
       if (*frame % 120 == 0)
       {
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderClear(renderer);
-        print_tiles(renderer);
-        print_vram(renderer);
+        //print_vram(renderer);
         print_joypad(renderer, imgs, rects);
 
         SDL_RenderSetScale(renderer, 2, 2);
@@ -255,7 +246,7 @@ int main(int argc, char *args[])
 
   if (sdl)
   {
-    SDL_CreateWindowAndRenderer(480 * 2, 144 * 2 + 100, 0, &pWindow, &renderer);
+    SDL_CreateWindowAndRenderer(160 * 2, 144 * 2 + 100, 0, &pWindow, &renderer);
 
     if (!pWindow || !renderer)
     {
@@ -293,17 +284,14 @@ int main(int argc, char *args[])
     else
     {
       uint8_t op = read_byte();
-      execute(op);
+      execute(op, renderer);
       if (renderer && read_memory(0xFF44) == 0)
       {
         frame++;
         event_frame++;
         if (frame % 120 == 0)
         {
-          SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-          SDL_RenderClear(renderer);
-          print_tiles(renderer);
-          print_vram(renderer);
+          //print_vram(renderer);
           print_joypad(renderer, imgs, rects);
 
           SDL_RenderSetScale(renderer, 2, 2);
