@@ -3,7 +3,8 @@
 extern Mmu MMU;
 extern Registers r;
 extern My_clock my_clock;
-extern void (*Opcodes[0xFF]) (void);
+extern void (*Opcodes[0xFF + 1]) (void);
+extern void (*PrefixCB[0xFF + 1]) (void);
 
 void init(void)
 {
@@ -33,6 +34,40 @@ void opcode_0xcc(void)
 {
   uint16_t addr = read_word();
   if (getZ())
+  {
+    push_stack(r.PC.val);
+    r.PC.val = addr;
+    my_clock.t = 24;
+  }
+  else
+  {
+    my_clock.t = 12;
+  }
+  my_clock.m = 3;
+}
+
+// CALL NZ, a16
+void opcode_0xc4(void)
+{
+  uint16_t addr = read_word();
+  if (!getZ())
+  {
+    push_stack(r.PC.val);
+    r.PC.val = addr;
+    my_clock.t = 24;
+  }
+  else
+  {
+    my_clock.t = 12;
+  }
+  my_clock.m = 3;
+}
+
+// CALL C, a16
+void opcode_0xdc(void)
+{
+  uint16_t addr = read_word();
+  if (getC())
   {
     push_stack(r.PC.val);
     r.PC.val = addr;
@@ -280,13 +315,14 @@ void opcode_0x1b(void) { r.DE.val--; my_clock.m = 1; my_clock.t = 8; }
 void opcode_0x2b(void) { r.HL.val--; my_clock.m = 1; my_clock.t = 8; }
 void opcode_0x3b(void) { r.SP.val--; my_clock.m = 1; my_clock.t = 8; }
 
-// LD A,(HL-)
+// LD OPS
 void opcode_0x3a(void) { r.AF.bytes.high = read_memory(r.HL.val); r.HL.val--; my_clock.m = 1; my_clock.t = 8; }
 void opcode_0x21(void) { r.HL.val = read_word(); my_clock.m = 3; my_clock.t = 12; }
 void opcode_0x31(void) { r.SP.val = read_word(); my_clock.m = 3; my_clock.t = 12; }
 void opcode_0x06(void) { r.BC.bytes.high = read_byte(); my_clock.m = 2; my_clock.t = 8; }
 void opcode_0x16(void) { r.DE.bytes.high = read_byte(); my_clock.m = 2; my_clock.t = 8; }
 void opcode_0x26(void) { r.HL.bytes.high = read_byte(); my_clock.m = 2; my_clock.t = 8; }
+void opcode_0xf9(void) { r.SP.val = r.HL.val; my_clock.m = 1; my_clock.t = 8; }
 
 // ADD OPS
 void opcode_0x09(void) { add_16_op(&r.HL.val, r.BC.val); }
@@ -592,13 +628,29 @@ void opcode_0x30(void)
   my_clock.m = 2;
 }
 
+// RRCA
+void opcode_0x0f(void)
+{
+  uint8_t old_c = (r.AF.bytes.high) << 7;
+
+  r.AF.bytes.high = (r.AF.bytes.high >> 1) + old_c;
+  old_c > 0 ? setC() : resetC();
+
+  resetZ();
+  resetN();
+  resetH();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 // RLCA
 void opcode_0x07(void)
 {
-  uint8_t old_c = (r.AF.bytes.high & 0b10000000) >> 7;
+  uint8_t old_c = (r.AF.bytes.high) >> 7;
 
   r.AF.bytes.high = (r.AF.bytes.high << 1) + old_c;
-  old_c == 1 ? setC() : resetC();
+  old_c > 0 ? setC() : resetC();
 
   resetZ();
   resetN();
@@ -772,6 +824,15 @@ void opcode_0x27(void)
 
   resetH();
   r.AF.bytes.high == 0 ? setZ() : resetZ();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+// HALT
+void opcode_0x76(void)
+{
+  MMU.HALT = 1;
 
   my_clock.m = 1;
   my_clock.t = 4;
@@ -1054,6 +1115,7 @@ void load_opcodes(void)
   Opcodes[0x0C] = &opcode_0x0c;
   Opcodes[0x0D] = &opcode_0x0d;
   Opcodes[0x0E] = &loadcd8;
+  Opcodes[0x0F] = &opcode_0x0f;
 
   Opcodes[0x11] = &opcode_0x11;
   Opcodes[0x12] = &opcode_0x12;
@@ -1159,6 +1221,7 @@ void load_opcodes(void)
   Opcodes[0x73] = &opcode_0x73;
   Opcodes[0x74] = &opcode_0x74;
   Opcodes[0x75] = &opcode_0x75;
+  Opcodes[0x76] = &opcode_0x76;
   Opcodes[0x77] = &opcode_0x77;
   Opcodes[0x78] = &loadab;
   Opcodes[0x79] = &loadac;
@@ -1233,6 +1296,7 @@ void load_opcodes(void)
   Opcodes[0xC1] = &opcode_0xc1;
   Opcodes[0xC2] = &opcode_0xc2;
   Opcodes[0xC3] = &opcode_0xc3;
+  Opcodes[0xC4] = &opcode_0xc4;
   Opcodes[0xC5] = &opcode_0xc5;
   Opcodes[0xC6] = &opcode_0xc6;
   Opcodes[0xC7] = &opcode_0xc7;
@@ -1254,6 +1318,7 @@ void load_opcodes(void)
   Opcodes[0xD8] = &opcode_0xd8;
   Opcodes[0xD9] = &opcode_0xd9;
   Opcodes[0xDA] = &opcode_0xda;
+  Opcodes[0xDC] = &opcode_0xdc;
   Opcodes[0xDF] = &opcode_0xdf;
 
   Opcodes[0xE0] = &opcode_0xe0;
@@ -1273,6 +1338,7 @@ void load_opcodes(void)
   Opcodes[0xF5] = &opcode_0xf5;
   Opcodes[0xF6] = &opcode_0xf6;
   Opcodes[0xF7] = &opcode_0xf7;
+  Opcodes[0xF9] = &opcode_0xf9;
   Opcodes[0xFA] = &opcode_0xfa;
   Opcodes[0xFB] = &opcode_0xfb;
   Opcodes[0xFE] = &opcode_0xfe;
@@ -1516,11 +1582,18 @@ void load_prefixcb(void)
 
 static struct timespec start, end;
 
-static void my_clock_handling(SDL_Renderer *renderer)
+static void my_clock_handling(SDL_Renderer *renderer, int *display)
 {
   my_clock.total_m += my_clock.m;
   my_clock.total_t += my_clock.t;
   my_clock.lineticks += my_clock.m;
+  my_clock.divider += my_clock.m;
+  if (my_clock.divider > 255)
+  {
+      my_clock.divider = 0;
+      MMU.memory[0xFF04]++;
+  }
+
   switch (my_clock.mode)
   {
     case 0:
@@ -1529,13 +1602,27 @@ static void my_clock_handling(SDL_Renderer *renderer)
         if (read_memory(0xFF44) == 143)
         {
           my_clock.mode = 1;
+          write_memory(0xFF41, read_memory(0xFF41) | (1 << 0));
+          write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 1));
+          if (test_bit(read_memory(0xFF41), 4))
+            request_interupt(1);
         }
         else
         {
           my_clock.mode = 2;
+          write_memory(0xFF41, read_memory(0xFF41) | (1 << 1));
+          write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 0));
+          if (test_bit(read_memory(0xFF41), 5))
+            request_interupt(1);
         }
         my_clock.lineticks = 0;
-        print_tiles(renderer);
+
+        uint8_t flag = read_memory(0xFF40);
+        if (test_bit(flag, 0))
+          print_tiles(renderer);
+        if (test_bit(flag, 1))
+          print_sprites(renderer);
+
         write_memory(0xFF44, read_memory(0xFF44) + 1);
       }
       break;
@@ -1546,6 +1633,24 @@ static void my_clock_handling(SDL_Renderer *renderer)
         my_clock.lineticks = 0;
         write_memory(0xFF44, 0);
         request_interupt(0);
+
+        // BEGIN SYNCHRONIZED DISPLAY LOGIC
+        clock_gettime(CLOCK_MONOTONIC_RAW, &end);
+
+        struct timespec sleep;
+        sleep.tv_sec = 0;
+        // 20ms
+        sleep.tv_nsec = 20000000L - (end.tv_nsec - start.tv_nsec);
+
+        if (sleep.tv_nsec > 0 && sleep.tv_nsec < 20000000L)
+          nanosleep(&sleep, NULL);
+
+        my_clock.total_m  = 0;
+
+        *display = 1;
+
+        clock_gettime(CLOCK_MONOTONIC_RAW, &start);
+        // END SYNCHRONIZED DISPLAY LOGIC
       }
       else if (my_clock.lineticks >= 456)
       {
@@ -1558,6 +1663,8 @@ static void my_clock_handling(SDL_Renderer *renderer)
       {
         my_clock.mode = 3;
         my_clock.lineticks = 0;
+        write_memory(0xFF41, read_memory(0xFF41) | (1 << 0));
+        write_memory(0xFF41, read_memory(0xFF41) | (1 << 1));
       }
       break;
     case 3:
@@ -1565,41 +1672,38 @@ static void my_clock_handling(SDL_Renderer *renderer)
       {
         my_clock.mode = 0;
         my_clock.lineticks = 0;
+        write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 0));
+        write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 1));
+        if (test_bit(read_memory(0xFF41), 3))
+          request_interupt(1);
       }
       break;
   }
 
-  if (my_clock.total_m > 69905)
-  {
-    clock_gettime(CLOCK_MONOTONIC_RAW, &end);
-
-    struct timespec sleep;
-    sleep.tv_sec = 0;
-    // 20ms
-    sleep.tv_nsec = 20000000L - (end.tv_nsec - start.tv_nsec);
-
-    if (sleep.tv_nsec < 20000000L)
-      nanosleep(&sleep, NULL);
-
-    //uint64_t delta_us = (end.tv_sec - start.tv_sec) * 1000000 + (end.tv_nsec - start.tv_nsec) / 1000;
-
-    my_clock.total_m  = 0;
-
-    SDL_RenderSetScale(renderer, 2, 2);
-    SDL_RenderPresent(renderer);
-
-    clock_gettime(CLOCK_MONOTONIC_RAW, &start);
-  }
+  // check the conincidence flag
+   if (read_memory(0xFF44) == read_memory(0xFF45))
+   {
+     write_memory(0xFF41, read_memory(0xFF41) | (1 << 2));
+     if (test_bit(read_memory(0xFF41), 6))
+       request_interupt(1);
+   }
+   else
+   {
+     write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 2));
+   }
 }
 
-void execute(uint16_t op, SDL_Renderer *renderer)
+void execute(uint16_t op, SDL_Renderer *renderer, int *display)
 {
-  if (!Opcodes[op])
+  if (!MMU.HALT)
   {
-    fprintf(stderr, "Unknown Op %x at address %x", op, r.PC.val - 1);
-    exit(1);
+    if (!Opcodes[op])
+    {
+      fprintf(stderr, "Unknown Op %x at address %x", op, r.PC.val - 1);
+      exit(1);
+    }
+    Opcodes[op]();
   }
-  Opcodes[op]();
 
-  my_clock_handling(renderer);
+  my_clock_handling(renderer, display);
 }

@@ -27,7 +27,7 @@ int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
   return 0;
 }
 
-void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *event_frame
+void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints
               , SDL_Texture *imgs[], SDL_Rect rects[])
 {
   char input[10];
@@ -39,26 +39,27 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
     while (1)
     {
       uint8_t op = read_byte();
+      if (MMU.HALT)
+        r.PC.val--;
+
       if (trace)
         printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
-      execute(op, renderer);
+      int a = 0;
+      execute(op, renderer, &a);
 
-      if (renderer && read_memory(0xFF44) == 0)
+      if (renderer && a)
       {
-        (*frame)++;
-        (*event_frame)++;
-        if (*frame % 60 == 0)
-        {
-          //print_vram(renderer);
-          print_joypad(renderer, imgs, rects);
-          *frame = 0;
-          //SDL_Delay(10);
-        }
-        if (*event_frame % 100 == 0)
-        {
-          SDL_PumpEvents();
-          *event_frame = 0;
-        }
+        SDL_PumpEvents();
+
+        SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &rect);
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        print_joypad(renderer, imgs, rects);
+
+        SDL_RenderSetScale(renderer, 2, 2);
+        SDL_RenderPresent(renderer);
       }
 
       if (renderer)
@@ -89,26 +90,21 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints, int *frame, int *e
     printf("%x -> ", r.PC.val);
     uint8_t op = read_byte();
     printf("%x\n", op);
-    execute(op, renderer);
-    if (renderer && read_memory(0xFF44) == 0)
+    int a = 0;
+    execute(op, renderer, &a);
+    if (renderer && a)
     {
-      (*frame)++;
-      (*event_frame)++;
-      if (*frame % 120 == 0)
-      {
-        //print_vram(renderer);
-        print_joypad(renderer, imgs, rects);
+      SDL_PumpEvents();
 
-        SDL_RenderSetScale(renderer, 2, 2);
-        SDL_RenderPresent(renderer);
-        *frame = 0;
-        //SDL_Delay(10);
-      }
-      if (*event_frame % 100 == 0)
-      {
-        SDL_PumpEvents();
-        *event_frame = 0;
-      }
+      SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
+      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+      SDL_RenderFillRect(renderer, &rect);
+
+      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+      print_joypad(renderer, imgs, rects);
+
+      SDL_RenderSetScale(renderer, 2, 2);
+      SDL_RenderPresent(renderer);
     }
     do_interupt();
     print_r();
@@ -224,6 +220,12 @@ int main(int argc, char *args[])
       sdl = 1;
     else if (strcmp(args[i], "--trace") == 0)
       trace = 1;
+    else if (strcmp(args[i], "--rom") == 0)
+    {
+      MMU.path_rom = malloc(strlen(args[i + 1]));
+      memcpy(MMU.path_rom, args[i + 1], strlen(args[i + 1]) + 1);
+      i++;
+    }
     else
     {
       printf("Unknown arg: %s\n", args[i]);
@@ -272,38 +274,30 @@ int main(int argc, char *args[])
   for (int i = 0; i < 100; i++)
     breakpoints[i] = -1;
 
-  int frame = 0;
-  int event_frame = 0;
-
   while (1)
   {
     if (debug)
     {
-      debug_mode(renderer, &breakpoints[0], &frame, &event_frame, imgs, rects);
+      debug_mode(renderer, &breakpoints[0], imgs, rects);
     }
     else
     {
       uint8_t op = read_byte();
-      execute(op, renderer);
-      if (renderer && read_memory(0xFF44) == 0)
+      int a = 0;
+      execute(op, renderer, &a);
+      if (renderer && a)
       {
-        frame++;
-        event_frame++;
-        if (frame % 120 == 0)
-        {
-          //print_vram(renderer);
-          print_joypad(renderer, imgs, rects);
+        SDL_PumpEvents();
 
-          SDL_RenderSetScale(renderer, 2, 2);
-          SDL_RenderPresent(renderer);
-          frame = 0;
-          //SDL_Delay(10);
-        }
-        if (event_frame % 100 == 0)
-        {
-          SDL_PumpEvents();
-          event_frame = 0;
-        }
+        SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
+        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+        SDL_RenderFillRect(renderer, &rect);
+
+        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        print_joypad(renderer, imgs, rects);
+
+        SDL_RenderSetScale(renderer, 2, 2);
+        SDL_RenderPresent(renderer);
       }
       do_interupt();
     }

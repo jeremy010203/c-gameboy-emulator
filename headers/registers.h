@@ -38,11 +38,12 @@ typedef struct my_clock
   uint32_t total_t;
   uint8_t mode;
   uint16_t lineticks;
+  uint16_t divider;
 } My_clock;
 
 My_clock my_clock;
-void (*Opcodes[0xFF]) (void);
-void (*PrefixCB[0xFF]) (void);
+void (*Opcodes[0xFF + 1]) (void);
+void (*PrefixCB[0xFF + 1]) (void);
 Registers r;
 
 void init_registers(void);

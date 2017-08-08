@@ -4,7 +4,7 @@ HEADER_DIR=headers
 TEST_DIR=tests
 HEADER_TEST_DIR=tests
 
-CFLAGS= -Werror -Wall -Wextra -g
+CFLAGS= -Werror -Wall -Wextra -g -O3
 SDL_DIR=/Library/Frameworks/SDL2.framework
 
 SOURCE_FILES= \

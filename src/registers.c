@@ -14,6 +14,7 @@ void init_registers()
   my_clock.total_t = 0;
   my_clock.lineticks = 0;
   my_clock.mode = 2;
+  my_clock.divider = 0;
 }
 
 void print_r()

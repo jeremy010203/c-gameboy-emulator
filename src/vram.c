@@ -3,7 +3,8 @@
 extern Mmu MMU;
 extern Registers r;
 extern My_clock my_clock;
-extern void (*Opcodes[0xFF]) (void);
+extern void (*Opcodes[0xFF + 1]) (void);
+extern void (*PrefixCB[0xFF + 1]) (void);
 
 static void print_tile(SDL_Renderer *renderer, uint16_t addr, int x, int y)
 {
@@ -40,6 +41,93 @@ static void print_tile(SDL_Renderer *renderer, uint16_t addr, int x, int y)
     }
   }
   // SDL_RenderDrawPoints(renderer, &points[0], k);
+}
+
+void print_sprites(SDL_Renderer *renderer)
+{
+  uint8_t flags = read_memory(0xFF40);
+  uint8_t double_sprite = test_bit(flags, 2);
+  for (int i = 0; i < 40; i++)
+  {
+    int index = i * 4;
+    int yPos = read_memory(0xFE00 + index) - 16;
+    int xPos = read_memory(0xFE00 + index + 1) - 8;
+    int tileLocation = read_memory(0xFE00 + index + 2);
+    int attributes = read_memory(0xFE00 + index + 3);
+
+    int yFlip = test_bit(attributes, 6);
+    int xFlip = test_bit(attributes, 5);
+    int scanline = read_memory(0xFF44);
+    int ysize = double_sprite ? 16 : 8;
+
+    //printf("%d,%d,%d\n", scanline, yPos, yPos + ysize);
+    //printf("%x\n", 0xFE00 + index);
+
+    if ((scanline >= yPos) && (scanline < (yPos + ysize)))
+    {
+      int line = scanline - yPos;
+      if (yFlip)
+      {
+        line -= ysize ;
+        line *= -1 ;
+      }
+
+      line *= 2; // same as for tiles
+      uint16_t dataAddress = (0x8000 + (tileLocation * 16)) + line;
+      uint8_t data1 = read_memory(dataAddress);
+      uint8_t data2 = read_memory(dataAddress + 1);
+
+      for (int tilePixel = 7; tilePixel >= 0; tilePixel--)
+      {
+        int colourbit = tilePixel;
+        if (xFlip)
+        {
+          colourbit -= 7 ;
+          colourbit *= -1 ;
+        }
+
+         int colourNum = test_bit(data2, colourbit);
+         colourNum <<= 1;
+         colourNum |= test_bit(data1, colourbit);
+
+         int col = 0;
+         uint8_t palette = read_memory(test_bit(attributes, 4) ? 0xFF49 : 0xFF48);
+         int hi = 0;
+         int lo = 0;
+
+         switch (colourNum)
+         {
+           case 0: hi = 1; lo = 0; break;
+           case 1: hi = 3; lo = 2; break;
+           case 2: hi = 5; lo = 4; break;
+           case 3: hi = 7; lo = 6; break;
+         }
+
+         int colour = 0;
+         colour = test_bit(palette, hi) << 1;
+         colour |= test_bit(palette, lo);
+         col = colour;
+
+         if (col == 0)
+           continue;
+
+         int red = 0;
+         int green = 0;
+         int blue = 0;
+
+         switch(col)
+         {
+          case 0:	red = 255; green = 255; blue = 255; break;
+          case 1: red = 0xCC; green = 0xCC; blue = 0xCC; break;
+          case 2:	red = 0x77; green = 0x77; blue = 0x77; break;
+         }
+
+         int pixel = xPos - tilePixel + 7;
+         SDL_SetRenderDrawColor(renderer, red, green, blue, 255);
+         SDL_RenderDrawPoint(renderer, pixel, scanline);
+       }
+     }
+  }
 }
 
 void print_tiles(SDL_Renderer *renderer)
@@ -86,7 +174,7 @@ void print_tiles(SDL_Renderer *renderer)
 
     int colourNum = test_bit(data2, colourBit);
     colourNum <<= 1;
-    colourNum |= test_bit(data1,colourBit);
+    colourNum |= test_bit(data1, colourBit);
 
     int col = 0;
     uint8_t palette = read_memory(0xFF47) ;
