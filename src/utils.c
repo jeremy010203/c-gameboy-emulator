@@ -385,6 +385,22 @@ void opcode_0x96(void)
 void opcode_0x97(void) { sub_8_op(&r.AF.bytes.high, r.AF.bytes.high); }
 void opcode_0xd6(void) { sub_8_op(&r.AF.bytes.high, read_byte()); }
 
+// SBC OPS
+void opcode_0x98(void) { sbc_op(&r.AF.bytes.high, r.BC.bytes.high); }
+void opcode_0x99(void) { sbc_op(&r.AF.bytes.high, r.BC.bytes.low); }
+void opcode_0x9a(void) { sbc_op(&r.AF.bytes.high, r.DE.bytes.high); }
+void opcode_0x9b(void) { sbc_op(&r.AF.bytes.high, r.DE.bytes.low); }
+void opcode_0x9c(void) { sbc_op(&r.AF.bytes.high, r.HL.bytes.high); }
+void opcode_0x9d(void) { sbc_op(&r.AF.bytes.high, r.HL.bytes.low); }
+void opcode_0x9e(void)
+{
+  sbc_op(&r.AF.bytes.high, read_memory(r.HL.val));
+  my_clock.m = 1;
+  my_clock.t = 8;
+}
+void opcode_0x9f(void) { sbc_op(&r.AF.bytes.high, r.AF.bytes.high); }
+void opcode_0xde(void) { sbc_op(&r.AF.bytes.high, read_byte()); }
+
 // XOR OPS
 void opcode_0xa8(void) { xor_8_op(&r.AF.bytes.high, r.BC.bytes.high); }
 void opcode_0xa9(void) { xor_8_op(&r.AF.bytes.high, r.BC.bytes.low); }
@@ -663,12 +679,26 @@ void opcode_0x07(void)
 // RLA
 void opcode_0x17(void)
 {
-  uint8_t old_c = (r.AF.bytes.high & 0b10000000) >> 7;
-  uint8_t carry = getC();
+  uint8_t old_7 = r.AF.bytes.high >> 7;
 
-  r.AF.bytes.high = (r.AF.bytes.high << 1) + carry;
-  old_c == 1 ? setC() : resetC();
+  r.AF.bytes.high = (r.AF.bytes.high << 1) + getC();
+  old_7 == 1 ? setC() : resetC();
 
+  resetZ();
+  resetN();
+  resetH();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+// RRA
+void opcode_0x1f(void)
+{
+  uint8_t old_0 = (r.AF.bytes.high << 7) >> 7;
+  r.AF.bytes.high = (r.AF.bytes.high >> 1) + (getC() << 7);
+
+  old_0 == 1 ? setC() : resetC();
   resetZ();
   resetN();
   resetH();
@@ -766,6 +796,17 @@ void opcode_0x2f(void)
   my_clock.t = 4;
 }
 
+// CCF
+void opcode_0x3f(void)
+{
+  getC() ? resetC() : setC(); // Inverse Carry flag
+  resetN();
+  resetH();
+
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 // RST OPS
 void opcode_0xc7(void) { rst_op(0); }
 void opcode_0xcf(void) { rst_op(0x08); }
@@ -838,21 +879,25 @@ void opcode_0x76(void)
   my_clock.t = 4;
 }
 
-void prefix_0x11(void)
-{
-  uint8_t old_c = (r.BC.bytes.low & 0b10000000) >> 7;
-  uint8_t carry = getC();
+// RL OPS
+void prefix_0x10(void) { rl_op(&r.BC.bytes.high); }
+void prefix_0x11(void) { rl_op(&r.BC.bytes.low); }
+void prefix_0x12(void) { rl_op(&r.DE.bytes.high); }
+void prefix_0x13(void) { rl_op(&r.DE.bytes.low); }
+void prefix_0x14(void) { rl_op(&r.HL.bytes.high); }
+void prefix_0x15(void) { rl_op(&r.HL.bytes.low); }
+void prefix_0x16(void) { rl_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x17(void) { rl_op(&r.AF.bytes.high); }
 
-  r.BC.bytes.low = (r.BC.bytes.low << 1) + carry;
-  r.BC.bytes.low == 0 ? setZ() : resetZ();
-  old_c == 1 ? setC() : resetC();
-
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 8;
-}
+// RR OPS
+void prefix_0x18(void) { rr_op(&r.BC.bytes.high); }
+void prefix_0x19(void) { rr_op(&r.BC.bytes.low); }
+void prefix_0x1a(void) { rr_op(&r.DE.bytes.high); }
+void prefix_0x1b(void) { rr_op(&r.DE.bytes.low); }
+void prefix_0x1c(void) { rr_op(&r.HL.bytes.high); }
+void prefix_0x1d(void) { rr_op(&r.HL.bytes.low); }
+void prefix_0x1e(void) { rr_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x1f(void) { rr_op(&r.AF.bytes.high); }
 
 // SLA OPS
 void prefix_0x20(void) { sla_op(&r.BC.bytes.high); }
@@ -863,6 +908,16 @@ void prefix_0x24(void) { sla_op(&r.HL.bytes.high); }
 void prefix_0x25(void) { sla_op(&r.HL.bytes.low); }
 void prefix_0x26(void) { sla_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x27(void) { sla_op(&r.AF.bytes.high); }
+
+// SRA OPS
+void prefix_0x28(void) { sla_op(&r.BC.bytes.high); }
+void prefix_0x29(void) { sla_op(&r.BC.bytes.low); }
+void prefix_0x2a(void) { sla_op(&r.DE.bytes.high); }
+void prefix_0x2b(void) { sla_op(&r.DE.bytes.low); }
+void prefix_0x2c(void) { sla_op(&r.HL.bytes.high); }
+void prefix_0x2d(void) { sla_op(&r.HL.bytes.low); }
+void prefix_0x2e(void) { sla_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
+void prefix_0x2f(void) { sla_op(&r.AF.bytes.high); }
 
 // SWAP OPS
 void prefix_0x30(void) { swap_op(&r.BC.bytes.high); }
@@ -1131,6 +1186,7 @@ void load_opcodes(void)
   Opcodes[0x1C] = &opcode_0x1c;
   Opcodes[0x1D] = &opcode_0x1d;
   Opcodes[0x1E] = &loaded8;
+  Opcodes[0x1F] = &opcode_0x1f;
 
   Opcodes[0x20] = &opcode_0x20;
   Opcodes[0x21] = &opcode_0x21;
@@ -1163,6 +1219,7 @@ void load_opcodes(void)
   Opcodes[0x3C] = &opcode_0x3c;
   Opcodes[0x3D] = &opcode_0x3d;
   Opcodes[0x3E] = &loadad8;
+  Opcodes[0x3F] = &opcode_0x3f;
 
   Opcodes[0x40] = &loadbb;
   Opcodes[0x41] = &loadbc;
@@ -1257,6 +1314,14 @@ void load_opcodes(void)
   Opcodes[0x95] = &opcode_0x95;
   Opcodes[0x96] = &opcode_0x96;
   Opcodes[0x97] = &opcode_0x97;
+  Opcodes[0x98] = &opcode_0x98;
+  Opcodes[0x99] = &opcode_0x99;
+  Opcodes[0x9a] = &opcode_0x9a;
+  Opcodes[0x9b] = &opcode_0x9b;
+  Opcodes[0x9c] = &opcode_0x9c;
+  Opcodes[0x9d] = &opcode_0x9d;
+  Opcodes[0x9e] = &opcode_0x9e;
+  Opcodes[0x9f] = &opcode_0x9f;
 
   Opcodes[0xA0] = &opcode_0xa0;
   Opcodes[0xA1] = &opcode_0xa1;
@@ -1319,6 +1384,7 @@ void load_opcodes(void)
   Opcodes[0xD9] = &opcode_0xd9;
   Opcodes[0xDA] = &opcode_0xda;
   Opcodes[0xDC] = &opcode_0xdc;
+  Opcodes[0xDE] = &opcode_0xde;
   Opcodes[0xDF] = &opcode_0xdf;
 
   Opcodes[0xE0] = &opcode_0xe0;
@@ -1347,7 +1413,22 @@ void load_opcodes(void)
 
 void load_prefixcb(void)
 {
+  PrefixCB[0x10] = &prefix_0x10;
   PrefixCB[0x11] = &prefix_0x11;
+  PrefixCB[0x12] = &prefix_0x12;
+  PrefixCB[0x13] = &prefix_0x13;
+  PrefixCB[0x14] = &prefix_0x14;
+  PrefixCB[0x15] = &prefix_0x15;
+  PrefixCB[0x16] = &prefix_0x16;
+  PrefixCB[0x17] = &prefix_0x17;
+  PrefixCB[0x18] = &prefix_0x18;
+  PrefixCB[0x19] = &prefix_0x19;
+  PrefixCB[0x1a] = &prefix_0x1a;
+  PrefixCB[0x1b] = &prefix_0x1b;
+  PrefixCB[0x1c] = &prefix_0x1c;
+  PrefixCB[0x1d] = &prefix_0x1d;
+  PrefixCB[0x1e] = &prefix_0x1e;
+  PrefixCB[0x1f] = &prefix_0x1f;
 
   PrefixCB[0x20] = &prefix_0x20;
   PrefixCB[0x21] = &prefix_0x21;
@@ -1357,6 +1438,14 @@ void load_prefixcb(void)
   PrefixCB[0x25] = &prefix_0x25;
   PrefixCB[0x26] = &prefix_0x26;
   PrefixCB[0x27] = &prefix_0x27;
+  PrefixCB[0x28] = &prefix_0x28;
+  PrefixCB[0x29] = &prefix_0x29;
+  PrefixCB[0x2a] = &prefix_0x2a;
+  PrefixCB[0x2b] = &prefix_0x2b;
+  PrefixCB[0x2c] = &prefix_0x2c;
+  PrefixCB[0x2d] = &prefix_0x2d;
+  PrefixCB[0x2e] = &prefix_0x2e;
+  PrefixCB[0x2f] = &prefix_0x2f;
 
   PrefixCB[0x30] = &prefix_0x30;
   PrefixCB[0x31] = &prefix_0x31;
@@ -1582,7 +1671,7 @@ void load_prefixcb(void)
 
 static struct timespec start, end;
 
-static void my_clock_handling(SDL_Renderer *renderer, int *display)
+static void my_clock_handling(uint8_t pixels[], int *display)
 {
   my_clock.total_m += my_clock.m;
   my_clock.total_t += my_clock.t;
@@ -1619,9 +1708,9 @@ static void my_clock_handling(SDL_Renderer *renderer, int *display)
 
         uint8_t flag = read_memory(0xFF40);
         if (test_bit(flag, 0))
-          print_tiles(renderer);
+          print_tiles(pixels);
         if (test_bit(flag, 1))
-          print_sprites(renderer);
+          print_sprites(pixels);
 
         write_memory(0xFF44, read_memory(0xFF44) + 1);
       }
@@ -1640,9 +1729,9 @@ static void my_clock_handling(SDL_Renderer *renderer, int *display)
         struct timespec sleep;
         sleep.tv_sec = 0;
         // 20ms
-        sleep.tv_nsec = 20000000L - (end.tv_nsec - start.tv_nsec);
+        sleep.tv_nsec = 16600000L - (end.tv_nsec - start.tv_nsec);
 
-        if (sleep.tv_nsec > 0 && sleep.tv_nsec < 20000000L)
+        if (sleep.tv_nsec > 0 && sleep.tv_nsec < 16600000L)
           nanosleep(&sleep, NULL);
 
         my_clock.total_m  = 0;
@@ -1693,7 +1782,7 @@ static void my_clock_handling(SDL_Renderer *renderer, int *display)
    }
 }
 
-void execute(uint16_t op, SDL_Renderer *renderer, int *display)
+void execute(uint16_t op, uint8_t pixels[], int *display)
 {
   if (!MMU.HALT)
   {
@@ -1705,5 +1794,5 @@ void execute(uint16_t op, SDL_Renderer *renderer, int *display)
     Opcodes[op]();
   }
 
-  my_clock_handling(renderer, display);
+  my_clock_handling(pixels, display);
 }

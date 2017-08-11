@@ -228,7 +228,7 @@ void do_interupt(void)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
-            printf("Execute interupt: %u\n", i);
+            //printf("Execute interupt: %u\n", i);
             execute_interupt(i);
           }
         }

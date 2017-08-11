@@ -14,6 +14,10 @@ void keyReleased(int key);
 void print_joypad(SDL_Renderer *renderer, SDL_Texture *imgs[], SDL_Rect rects[]);
 
 static int trace = 0;
+static int debug = 0;
+static int sdl = 0;
+static int WIDTH = (160 + 320) * 2;
+static int HEIGHT = 144 * 2 + 100;
 
 int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
 {
@@ -27,7 +31,7 @@ int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
   return 0;
 }
 
-void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints
+void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], int16_t* breakpoints
               , SDL_Texture *imgs[], SDL_Rect rects[])
 {
   char input[10];
@@ -45,18 +49,32 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints
       if (trace)
         printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
       int a = 0;
-      execute(op, renderer, &a);
+      execute(op, pixels, &a);
 
       if (renderer && a)
       {
         SDL_PumpEvents();
 
-        SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderFillRect(renderer, &rect);
+        SDL_UpdateTexture
+            (
+            texture,
+            NULL,
+            &pixels[0],
+            WIDTH * 4
+            );
 
+        SDL_Rect src_rect = {0, 0, 160, 144};
+        SDL_Rect dst_rect = {0, 0, 160, 144};
+        SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
+
+        SDL_Rect rect = {0, 144, 160, 100};
+        SDL_Rect rect2 = {160, 0, 320, 144 + 100};
         SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+        SDL_RenderFillRect(renderer, &rect);
+        SDL_RenderFillRect(renderer, &rect2);
+
         print_joypad(renderer, imgs, rects);
+        //print_vram(renderer);
 
         SDL_RenderSetScale(renderer, 2, 2);
         SDL_RenderPresent(renderer);
@@ -73,6 +91,8 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints
         state[SDL_SCANCODE_RIGHT] ? keyPressed(0) : keyReleased(0);
         state[SDL_SCANCODE_UP] ? keyPressed(2) : keyReleased(2);
         state[SDL_SCANCODE_DOWN] ? keyPressed(3) : keyReleased(3);
+        if (state[SDL_SCANCODE_Q])
+          break;
         if (state[SDL_SCANCODE_ESCAPE])
           exit(1);
       }
@@ -91,7 +111,7 @@ void debug_mode(SDL_Renderer *renderer, int16_t* breakpoints
     uint8_t op = read_byte();
     printf("%x\n", op);
     int a = 0;
-    execute(op, renderer, &a);
+    execute(op, pixels, &a);
     if (renderer && a)
     {
       SDL_PumpEvents();
@@ -207,11 +227,8 @@ void print_joypad(SDL_Renderer *renderer, SDL_Texture *imgs[], SDL_Rect rects[])
     SDL_RenderCopy(renderer, imgs[8], NULL, &rects[8]);
 }
 
-int main(int argc, char *args[])
+void handle_args(int argc, char *args[])
 {
-  int debug = 0;
-  int sdl = 0;
-
   for (int i = 1; i < argc; i++)
   {
     if (strcmp(args[i], "--debug") == 0)
@@ -232,12 +249,19 @@ int main(int argc, char *args[])
       exit(1);
     }
   }
+}
+
+int main(int argc, char *args[])
+{
+  handle_args(argc, args);
 
   if (sdl)
     SDL_Init(SDL_INIT_VIDEO);
 
+  uint8_t pixels[WIDTH * HEIGHT * 4];
   SDL_Window* pWindow = NULL;
   SDL_Renderer *renderer = NULL;
+  SDL_Texture* texture = NULL;
   SDL_Texture *imgs[9];
   SDL_Rect rects[9];
   rects[0].x = 10; rects[0].y = 144 + 5; rects[0].w = 40; rects[0].h = 40;
@@ -248,7 +272,14 @@ int main(int argc, char *args[])
 
   if (sdl)
   {
-    SDL_CreateWindowAndRenderer(160 * 2, 144 * 2 + 100, 0, &pWindow, &renderer);
+    SDL_CreateWindowAndRenderer(WIDTH, HEIGHT, 0, &pWindow, &renderer);
+    texture = SDL_CreateTexture
+        (
+        renderer,
+        SDL_PIXELFORMAT_ARGB8888,
+        SDL_TEXTUREACCESS_STREAMING,
+        WIDTH, HEIGHT
+        );
 
     if (!pWindow || !renderer)
     {
@@ -268,8 +299,6 @@ int main(int argc, char *args[])
 
   init();
 
-  printf("Load bios successfully\n");
-
   int16_t breakpoints[100];
   for (int i = 0; i < 100; i++)
     breakpoints[i] = -1;
@@ -278,13 +307,13 @@ int main(int argc, char *args[])
   {
     if (debug)
     {
-      debug_mode(renderer, &breakpoints[0], imgs, rects);
+      debug_mode(renderer, texture, pixels, &breakpoints[0], imgs, rects);
     }
     else
     {
       uint8_t op = read_byte();
       int a = 0;
-      execute(op, renderer, &a);
+      execute(op, pixels, &a);
       if (renderer && a)
       {
         SDL_PumpEvents();

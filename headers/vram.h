@@ -5,8 +5,8 @@
 #include "registers.h"
 #include <SDL2/SDL.h>
 
-void print_tiles(SDL_Renderer *renderer);
-void print_sprites(SDL_Renderer *renderer);
-void print_vram(SDL_Renderer *renderer);
+void print_tiles(uint8_t pixels[]);
+void print_sprites(uint8_t pixels[]);
+void print_vram(uint8_t pixels[]);
 
 #endif

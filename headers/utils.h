@@ -12,7 +12,7 @@
 void init(void);
 void load_opcodes(void);
 void load_prefixcb(void);
-void execute(uint16_t op, SDL_Renderer *renderer, int *display);
+void execute(uint16_t op,  uint8_t pixels[], int *display);
 
 void loadhlpa(void);
 void loadhlma(void);

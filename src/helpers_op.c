@@ -201,7 +201,6 @@ void ret_cond_op(int cond)
   {
     my_clock.t = 8;
   }
-
   my_clock.m = 1;
 }
 
@@ -213,6 +212,7 @@ void load(uint8_t* to, const uint8_t from)
     exit(1);
   }
   *to = from;
+
   my_clock.m = 1;
   my_clock.t = 4;
 }
@@ -248,6 +248,8 @@ void sla_op(uint8_t *reg)
   *reg >> 7 ? setC() : resetC();
   *reg <<= 1;
   *reg == 0 ? setZ() : resetZ();
+  resetN();
+  resetH();
 
   my_clock.m = 2;
   my_clock.t = 8;
@@ -258,6 +260,68 @@ void srl_op(uint8_t *reg)
   ((*reg << 7) >> 7) ? setC() : resetC();
   *reg >>= 1;
   *reg == 0 ? setZ() : resetZ();
+  resetN();
+  resetH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void rl_op(uint8_t *reg)
+{
+  uint8_t old_7 = *reg >> 7;
+  *reg = (*reg << 1) + getC();
+
+  old_7 == 1 ? setC() : resetC();
+  *reg == 0 ? setZ() : resetZ();
+  resetN();
+  resetH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void rr_op(uint8_t *reg)
+{
+  uint8_t old_0 = (*reg << 7) >> 7;
+  *reg = (*reg >> 1) + (getC() << 7);
+
+  old_0 == 1 ? setC() : resetC();
+  *reg == 0 ? setZ() : resetZ();
+  resetN();
+  resetH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void sbc_op(uint8_t *first, const uint8_t second)
+{
+  uint16_t new_second = second + getC();
+  uint8_t result = *first - (uint8_t)new_second;
+  (*first < new_second) ? setC() : resetC();
+
+  result == 0 ? setZ() : resetZ();
+  ((*first & 0xF) - ((new_second & 0xF))) < 0 ? setH() : resetH();
+  setN();
+
+  *first = result;
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
+void sra_op(uint8_t *reg)
+{
+  uint8_t old_0 = (*reg << 7) >> 7;
+  uint8_t old_7 = *reg >> 7;
+  old_0 ? setC() : resetC();
+
+  *reg >>= 1;
+  *reg += old_7 << 7;
+
+  *reg == 0 ? setZ() : resetZ();
+  resetN();
+  resetH();
 
   my_clock.m = 2;
   my_clock.t = 8;
