@@ -31,6 +31,34 @@ int is_breakpoint(const int16_t breakpoints[100], const uint16_t addr)
   return 0;
 }
 
+void print_screen(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[]
+                  , SDL_Texture *imgs[], SDL_Rect rects[])
+{
+  SDL_UpdateTexture
+      (
+      texture,
+      NULL,
+      &pixels[0],
+      WIDTH * 4
+      );
+
+  SDL_Rect src_rect = {0, 0, 160, 144};
+  SDL_Rect dst_rect = {0, 0, 160, 144};
+  SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
+
+  SDL_Rect rect = {0, 144, 160, 100};
+  SDL_Rect rect2 = {160, 0, 320, 144 + 100};
+  SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
+  SDL_RenderFillRect(renderer, &rect);
+  SDL_RenderFillRect(renderer, &rect2);
+
+  print_joypad(renderer, imgs, rects);
+  //print_vram(renderer);
+
+  SDL_RenderSetScale(renderer, 2, 2);
+  SDL_RenderPresent(renderer);
+}
+
 void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], int16_t* breakpoints
               , SDL_Texture *imgs[], SDL_Rect rects[])
 {
@@ -54,30 +82,7 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
       if (renderer && a)
       {
         SDL_PumpEvents();
-
-        SDL_UpdateTexture
-            (
-            texture,
-            NULL,
-            &pixels[0],
-            WIDTH * 4
-            );
-
-        SDL_Rect src_rect = {0, 0, 160, 144};
-        SDL_Rect dst_rect = {0, 0, 160, 144};
-        SDL_RenderCopy(renderer, texture, &src_rect, &dst_rect);
-
-        SDL_Rect rect = {0, 144, 160, 100};
-        SDL_Rect rect2 = {160, 0, 320, 144 + 100};
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        SDL_RenderFillRect(renderer, &rect);
-        SDL_RenderFillRect(renderer, &rect2);
-
-        print_joypad(renderer, imgs, rects);
-        //print_vram(renderer);
-
-        SDL_RenderSetScale(renderer, 2, 2);
-        SDL_RenderPresent(renderer);
+        print_screen(renderer, texture, pixels, imgs, rects);
       }
 
       if (renderer)
@@ -110,22 +115,15 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
     printf("%x -> ", r.PC.val);
     uint8_t op = read_byte();
     printf("%x\n", op);
+
     int a = 0;
     execute(op, pixels, &a);
     if (renderer && a)
     {
       SDL_PumpEvents();
-
-      SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
-      SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-      SDL_RenderFillRect(renderer, &rect);
-
-      SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-      print_joypad(renderer, imgs, rects);
-
-      SDL_RenderSetScale(renderer, 2, 2);
-      SDL_RenderPresent(renderer);
+      print_screen(renderer, texture, pixels, imgs, rects);
     }
+
     do_interupt();
     print_r();
   }
@@ -312,38 +310,34 @@ int main(int argc, char *args[])
     else
     {
       uint8_t op = read_byte();
+      if (MMU.HALT)
+        r.PC.val--;
       int a = 0;
       execute(op, pixels, &a);
+
       if (renderer && a)
       {
         SDL_PumpEvents();
+        print_screen(renderer, texture, pixels, imgs, rects);
+      }
 
-        SDL_Rect rect = {0, 144, 160, 100}; // x, y, width, height
-        SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-        SDL_RenderFillRect(renderer, &rect);
-
-        SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
-        print_joypad(renderer, imgs, rects);
-
-        SDL_RenderSetScale(renderer, 2, 2);
-        SDL_RenderPresent(renderer);
+      if (renderer)
+      {
+        const Uint8 *state = SDL_GetKeyboardState(NULL);
+        state[SDL_SCANCODE_A] ? keyPressed(4) : keyReleased(4);
+        state[SDL_SCANCODE_S] ? keyPressed(5) : keyReleased(5);
+        state[SDL_SCANCODE_RETURN] ? keyPressed(7) : keyReleased(7);
+        state[SDL_SCANCODE_SPACE] ? keyPressed(6) : keyReleased(6);
+        state[SDL_SCANCODE_LEFT] ? keyPressed(1) : keyReleased(1);
+        state[SDL_SCANCODE_RIGHT] ? keyPressed(0) : keyReleased(0);
+        state[SDL_SCANCODE_UP] ? keyPressed(2) : keyReleased(2);
+        state[SDL_SCANCODE_DOWN] ? keyPressed(3) : keyReleased(3);
+        if (state[SDL_SCANCODE_Q])
+          break;
+        if (state[SDL_SCANCODE_ESCAPE])
+          exit(1);
       }
       do_interupt();
-    }
-
-    if (sdl)
-    {
-      const Uint8 *state = SDL_GetKeyboardState(NULL);
-      state[SDL_SCANCODE_A] ? keyPressed(4) : keyReleased(4);
-      state[SDL_SCANCODE_S] ? keyPressed(5) : keyReleased(5);
-      state[SDL_SCANCODE_RETURN] ? keyPressed(7) : keyReleased(7);
-      state[SDL_SCANCODE_SPACE] ? keyPressed(6) : keyReleased(6);
-      state[SDL_SCANCODE_LEFT] ? keyPressed(1) : keyReleased(1);
-      state[SDL_SCANCODE_RIGHT] ? keyPressed(0) : keyReleased(0);
-      state[SDL_SCANCODE_UP] ? keyPressed(2) : keyReleased(2);
-      state[SDL_SCANCODE_DOWN] ? keyPressed(3) : keyReleased(3);
-      if (state[SDL_SCANCODE_ESCAPE])
-        exit(1);
     }
   }
 
