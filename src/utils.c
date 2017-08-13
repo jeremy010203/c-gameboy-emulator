@@ -596,13 +596,15 @@ void opcode_0xd2(void)
 // ADD SP, r8
 void opcode_0xe8(void)
 {
-  int32_t tmp2 = read_byte();
-  uint16_t tmp = r.SP.val + tmp2;
-  tmp2 = r.SP.val ^ tmp2 ^ tmp;
-  r.SP.val = tmp2;
+  int8_t tmp2 = read_byte();
+  uint8_t tmp2_unsigned = tmp2;
+  uint16_t result_unsigned = r.SP.bytes.low + tmp2_unsigned;
 
-  (tmp2 & 0x100) == 0x100 ? setC() : resetC();
-  (tmp2 & 0x10) == 0x10 ? setH() : resetH();
+  uint16_t tmp = (r.SP.val + tmp2);
+  r.SP.val = tmp;
+
+  (result_unsigned & 0x100) == 0x100 ? setC() : resetC();
+  (result_unsigned & 0x10) == 0x10 ? setH() : resetH();
   resetZ();
   resetN();
 
@@ -614,11 +616,13 @@ void opcode_0xe8(void)
 void opcode_0xf8(void)
 {
   int8_t tmp = read_byte();
-  r.HL.val = (r.SP.val + tmp);
-  tmp = (r.SP.val ^ tmp ^ r.HL.val);
+  uint8_t tmp2_unsigned = tmp;
+  uint16_t result_unsigned = r.SP.bytes.low + tmp2_unsigned;
 
-  (tmp & 0x100) == 0x100 ? setC() : resetC();
-  (tmp & 0x10) == 0x10 ? setH() : resetH();
+  r.HL.val = (r.SP.val + tmp);
+
+  (result_unsigned & 0x100) == 0x100 ? setC() : resetC();
+  (result_unsigned & 0x10) == 0x10 ? setH() : resetH();
   resetZ();
   resetN();
 
@@ -1729,7 +1733,8 @@ void load_prefixcb(void)
 
 void update_timers(void)
 {
-  if (my_clock.divider > 255)
+  my_clock.divider += my_clock.m;
+  if (my_clock.divider >= 255)
   {
       my_clock.divider = 0;
       MMU.memory[0xFF04]++;
@@ -1767,7 +1772,6 @@ static void my_clock_handling(uint8_t pixels[], int *display)
   my_clock.total_m += my_clock.m;
   my_clock.total_t += my_clock.t;
   my_clock.lineticks += my_clock.m;
-  my_clock.divider += my_clock.m;
   update_timers();
 
   switch (my_clock.mode)

@@ -206,10 +206,9 @@ void write_memory(uint16_t addr, uint8_t val)
   {
     uint8_t freq = (read_memory(addr) & 0x3);
     MMU.memory[addr] = val;
-    uint8_t new_freq = (read_memory(addr) & 0x3);
-    if (freq != new_freq)
+    if (freq != val)
     {
-      switch(read_memory(addr) & 0x3)
+      switch(read_memory(0xFF07) & 0x3)
       {
         case 0: my_clock.timer_counter = 1024; break;
         case 1: my_clock.timer_counter = 16; break;
@@ -217,6 +216,7 @@ void write_memory(uint16_t addr, uint8_t val)
         case 3: my_clock.timer_counter = 256; break;
       }
     }
+    return;
   }
 
   MMU.memory[addr] = val;
@@ -244,7 +244,7 @@ void do_interupt(void)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
-            printf("Execute interupt: %u\n", i);
+            //printf("Execute interupt: %u\n", i);
             execute_interupt(i);
             return;
           }

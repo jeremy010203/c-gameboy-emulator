@@ -139,8 +139,8 @@ void add_8_op(uint8_t *first, const uint8_t second)
 
 void add_16_op(uint16_t *first, const uint16_t second)
 {
-  uint32_t result = (uint32_t)*first + (uint32_t)second;
-  ((r.HL.val & 0xFFF) > (result & 0xFFF)) ? setH() : resetH();
+  uint32_t result = ((uint32_t)*first + (uint32_t)second);
+  ((*first & 0xFFF) > (result & 0xFFF)) ? setH() : resetH();
   (result > 0xFFFF) ? setC() : resetC();
   resetN();
 
