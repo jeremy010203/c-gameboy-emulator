@@ -39,6 +39,7 @@ typedef struct my_clock
   uint8_t mode;
   uint16_t lineticks;
   uint16_t divider;
+  int timer_counter;
 } My_clock;
 
 My_clock my_clock;

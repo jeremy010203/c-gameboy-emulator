@@ -141,10 +141,10 @@ void add_16_op(uint16_t *first, const uint16_t second)
 {
   uint32_t result = (uint32_t)*first + (uint32_t)second;
   ((r.HL.val & 0xFFF) > (result & 0xFFF)) ? setH() : resetH();
-  result > 0xFFFF ? setC() : resetC();
+  (result > 0xFFFF) ? setC() : resetC();
   resetN();
 
-  *first = result & 0xFFFF;
+  *first = (result & 0xFFFF);
 
   my_clock.m = 1;
   my_clock.t = 8;
@@ -152,14 +152,14 @@ void add_16_op(uint16_t *first, const uint16_t second)
 
 void sub_8_op(uint8_t *first, const uint8_t second)
 {
-  uint8_t result = *first - second;
+  uint8_t result = (*first - second);
   (*first < second) ? setC() : resetC();
 
-  result == 0 ? setZ() : resetZ();
+  (result == 0) ? setZ() : resetZ();
 
   int16_t testf = result & 0xF;
   int16_t tests = *first & 0xF;
-  testf > tests ? setH() : resetH();
+  (testf > tests) ? setH() : resetH();
   setN();
 
   *first = result;

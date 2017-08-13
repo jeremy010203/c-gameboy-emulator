@@ -613,9 +613,9 @@ void opcode_0xe8(void)
 // ADD HL, (SP + r8)
 void opcode_0xf8(void)
 {
-  int32_t tmp = read_byte();
-  r.HL.val = r.SP.val + tmp;
-  tmp = r.SP.val ^ tmp ^ r.HL.val;
+  int8_t tmp = read_byte();
+  r.HL.val = (r.SP.val + tmp);
+  tmp = (r.SP.val ^ tmp ^ r.HL.val);
 
   (tmp & 0x100) == 0x100 ? setC() : resetC();
   (tmp & 0x10) == 0x10 ? setH() : resetH();
@@ -1727,19 +1727,48 @@ void load_prefixcb(void)
   PrefixCB[0xfF] = &prefix_0xff;
 }
 
-static struct timespec start, end;
+void update_timers(void)
+{
+  if (my_clock.divider > 255)
+  {
+      my_clock.divider = 0;
+      MMU.memory[0xFF04]++;
+  }
 
+  if (test_bit(read_memory(0xFF07), 2))
+  {
+    my_clock.timer_counter -= my_clock.m;
+    if (my_clock.timer_counter <= 0)
+    {
+      switch(read_memory(0xFF07) & 0x3)
+      {
+        case 0: my_clock.timer_counter = 1024; break;
+        case 1: my_clock.timer_counter = 16; break;
+        case 2: my_clock.timer_counter = 64; break;
+        case 3: my_clock.timer_counter = 256; break;
+      }
+
+      if (read_memory(0xFF05) == 255)
+      {
+          write_memory(0xFF05, read_memory(0xFF06));
+          request_interupt(2);
+      }
+      else
+      {
+        write_memory(0xFF05, read_memory(0xFF05) + 1);
+      }
+    }
+  }
+}
+
+static struct timespec start, end;
 static void my_clock_handling(uint8_t pixels[], int *display)
 {
   my_clock.total_m += my_clock.m;
   my_clock.total_t += my_clock.t;
   my_clock.lineticks += my_clock.m;
   my_clock.divider += my_clock.m;
-  if (my_clock.divider > 255)
-  {
-      my_clock.divider = 0;
-      MMU.memory[0xFF04]++;
-  }
+  update_timers();
 
   switch (my_clock.mode)
   {

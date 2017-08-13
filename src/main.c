@@ -74,6 +74,12 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
       if (MMU.HALT)
         r.PC.val--;
 
+      //if (op == 0xfb)
+      //{
+      //  r.PC.val--;
+      //  break;
+      //}
+
       if (trace)
         printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
       int a = 0;
@@ -237,7 +243,7 @@ void handle_args(int argc, char *args[])
       trace = 1;
     else if (strcmp(args[i], "--rom") == 0)
     {
-      MMU.path_rom = malloc(strlen(args[i + 1]));
+      MMU.path_rom = malloc(strlen(args[i + 1]) + 1);
       memcpy(MMU.path_rom, args[i + 1], strlen(args[i + 1]) + 1);
       i++;
     }

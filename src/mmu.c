@@ -202,6 +202,22 @@ void write_memory(uint16_t addr, uint8_t val)
     MMU.memory[addr] = 0;
     return;
   }
+  else if (addr == 0xFF07) // TMC reg
+  {
+    uint8_t freq = (read_memory(addr) & 0x3);
+    MMU.memory[addr] = val;
+    uint8_t new_freq = (read_memory(addr) & 0x3);
+    if (freq != new_freq)
+    {
+      switch(read_memory(addr) & 0x3)
+      {
+        case 0: my_clock.timer_counter = 1024; break;
+        case 1: my_clock.timer_counter = 16; break;
+        case 2: my_clock.timer_counter = 64; break;
+        case 3: my_clock.timer_counter = 256; break;
+      }
+    }
+  }
 
   MMU.memory[addr] = val;
   if ((addr >= 0xE000) && (addr < 0xFE00))
@@ -228,8 +244,9 @@ void do_interupt(void)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
-            //printf("Execute interupt: %u\n", i);
+            printf("Execute interupt: %u\n", i);
             execute_interupt(i);
+            return;
           }
         }
     }
@@ -240,9 +257,11 @@ void execute_interupt(uint8_t i)
 {
   MMU.HALT = 0;
   r.ime = 0;
+
   uint8_t mem = read_memory(0xFF0F);
   mem &= ~(1 << i);
   write_memory(0xFF0F, mem);
+
   push_stack(r.PC.val);
   switch (i)
   {
