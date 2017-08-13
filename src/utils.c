@@ -205,7 +205,7 @@ void opcode_0x34(void)
 {
   uint8_t hl = read_memory(r.HL.val);
 
-  write_memory(r.HL.val, read_memory(r.HL.val) + 1);
+  write_memory(r.HL.val, hl + 1);
   read_memory(r.HL.val) == 0 ? setZ() : resetZ();
   ((read_memory(r.HL.val) ^ 0x01 ^ hl) & 0x10) ? setH() : resetH();
   resetN();
@@ -278,6 +278,16 @@ void opcode_0x01(void)
   my_clock.t = 12;
 }
 
+// LD (a16), SP
+void opcode_0x08(void)
+{
+  uint16_t addr = read_word();
+  write_memory(addr, r.SP.val);
+
+  my_clock.m = 3;
+  my_clock.t = 20;
+}
+
 // LD DE, d16
 void opcode_0x11(void)
 {
@@ -331,24 +341,24 @@ void opcode_0x29(void) { add_16_op(&r.HL.val, r.HL.val); }
 void opcode_0x39(void) { add_16_op(&r.HL.val, r.SP.val); }
 
 // ADC OPS
-void opcode_0x88(void) { add_8_op(&r.AF.bytes.high, r.BC.bytes.high + getC()); }
-void opcode_0x89(void) { add_8_op(&r.AF.bytes.high, r.BC.bytes.low + getC()); }
-void opcode_0x8a(void) { add_8_op(&r.AF.bytes.high, r.DE.bytes.high + getC()); }
-void opcode_0x8b(void) { add_8_op(&r.AF.bytes.high, r.DE.bytes.low + getC()); }
-void opcode_0x8c(void) { add_8_op(&r.AF.bytes.high, r.HL.bytes.high + getC()); }
-void opcode_0x8d(void) { add_8_op(&r.AF.bytes.high, r.HL.bytes.low + getC()); }
+void opcode_0x88(void) { adc_op(&r.AF.bytes.high, r.BC.bytes.high); }
+void opcode_0x89(void) { adc_op(&r.AF.bytes.high, r.BC.bytes.low); }
+void opcode_0x8a(void) { adc_op(&r.AF.bytes.high, r.DE.bytes.high); }
+void opcode_0x8b(void) { adc_op(&r.AF.bytes.high, r.DE.bytes.low); }
+void opcode_0x8c(void) { adc_op(&r.AF.bytes.high, r.HL.bytes.high); }
+void opcode_0x8d(void) { adc_op(&r.AF.bytes.high, r.HL.bytes.low); }
 void opcode_0x8e(void)
 {
-  add_8_op(&r.AF.bytes.high, read_memory(r.HL.val) + getC());
+  adc_op(&r.AF.bytes.high, read_memory(r.HL.val));
   my_clock.m = 1;
   my_clock.t = 8;
 }
-void opcode_0x8f(void) { add_8_op(&r.AF.bytes.high, r.AF.bytes.high + getC()); }
+void opcode_0x8f(void) { adc_op(&r.AF.bytes.high, r.AF.bytes.high); }
 
 // ADC A, d8
 void opcode_0xce(void)
 {
-  add_8_op(&r.AF.bytes.high, read_byte() + getC());
+  adc_op(&r.AF.bytes.high, read_byte());
   my_clock.m = 2;
   my_clock.t = 8;
 }
@@ -583,6 +593,40 @@ void opcode_0xd2(void)
   my_clock.m = 3;
 }
 
+// ADD SP, r8
+void opcode_0xe8(void)
+{
+  int8_t addr = read_byte();
+  uint16_t result = r.SP.val + addr;
+
+  (result > 255) ? setC() : resetC();
+  (((r.SP.val & 0xF) + (addr & 0xF)) & 0x10) ? setH() : resetH();
+  resetZ();
+  resetN();
+
+  r.SP.val = result;
+
+  my_clock.m = 2;
+  my_clock.t = 16;
+}
+
+// ADD HL, (SP + r8)
+void opcode_0xf8(void)
+{
+  int8_t addr = read_byte();
+  uint16_t result = r.HL.val + read_memory(r.SP.val + addr);
+
+  (result > 255) ? setC() : resetC();
+  (((r.HL.val & 0xF) + (read_memory(r.SP.val + addr) & 0xF)) & 0x10) ? setH() : resetH();
+  resetZ();
+  resetN();
+
+  r.HL.val = result;
+
+  my_clock.m = 2;
+  my_clock.t = 12;
+}
+
 // JR r8
 void opcode_0x18(void)
 {
@@ -647,10 +691,8 @@ void opcode_0x30(void)
 // RRCA
 void opcode_0x0f(void)
 {
-  uint8_t old_c = (r.AF.bytes.high) << 7;
-
-  r.AF.bytes.high = (r.AF.bytes.high >> 1) + old_c;
-  old_c > 0 ? setC() : resetC();
+  r.AF.bytes.high = (r.AF.bytes.high >> 1) | ((r.AF.bytes.high & 1) << 7);
+  r.AF.bytes.high > 0x7F ? setC() : resetC();
 
   resetZ();
   resetN();
@@ -663,12 +705,10 @@ void opcode_0x0f(void)
 // RLCA
 void opcode_0x07(void)
 {
-  uint8_t old_c = (r.AF.bytes.high) >> 7;
+  r.AF.bytes.high > 0x7F ? setC() : resetC();
+  r.AF.bytes.high = (r.AF.bytes.high << 1) | getC();
 
-  r.AF.bytes.high = (r.AF.bytes.high << 1) + old_c;
-  old_c > 0 ? setC() : resetC();
-
-  resetZ();
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -679,12 +719,11 @@ void opcode_0x07(void)
 // RLA
 void opcode_0x17(void)
 {
-  uint8_t old_7 = r.AF.bytes.high >> 7;
+  uint8_t carry = getC();
+  r.AF.bytes.high > 0x7F ? setC() : resetC();
+  r.AF.bytes.high = (r.AF.bytes.high << 1) | carry;
 
-  r.AF.bytes.high = (r.AF.bytes.high << 1) + getC();
-  old_7 == 1 ? setC() : resetC();
-
-  resetZ();
+  r.AF.bytes.high == 0 ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -721,7 +760,7 @@ void opcode_0x35(void)
   if (hl == 0)
     setH();
 
-  write_memory(r.HL.val, read_memory(r.HL.val) - 1);
+  write_memory(r.HL.val, hl - 1);
   read_memory(r.HL.val) == 0 ? setZ() : resetZ();
   setN();
 
@@ -788,7 +827,7 @@ void opcode_0xfb(void)
 // CPL
 void opcode_0x2f(void)
 {
-  r.AF.bytes.high = ~r.AF.bytes.high;
+  r.AF.bytes.high ^= 0xFF;
   setN();
   setH();
 
@@ -852,19 +891,28 @@ void opcode_0x7e(void)
 // DAA
 void opcode_0x27(void)
 {
-  uint8_t old_a = r.AF.bytes.high;
-  if (getH() || ((r.AF.bytes.high & 15) > 9))
-    r.AF.bytes.high += 6;
-
-  resetC();
-  if (getH() || (old_a > 0x99))
-  {
-    r.AF.bytes.high += 0x60;
-    setC();
-  }
-
-  resetH();
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  if (!getN()) {
+		if (getC()|| r.AF.bytes.high > 0x99) {
+			r.AF.bytes.high = (r.AF.bytes.high + 0x60) & 0xFF;
+			setC();
+		}
+		if (getH()|| (r.AF.bytes.high& 0xF) > 0x9) {
+			r.AF.bytes.high = (r.AF.bytes.high+ 0x06) & 0xFF;
+      resetH();
+		}
+	}
+	else if (getC() && getH()) {
+		r.AF.bytes.high = (r.AF.bytes.high + 0x9A) & 0xFF;
+		resetH();
+	}
+	else if (getC()) {
+		r.AF.bytes.high = (r.AF.bytes.high + 0xA0) & 0xFF;
+	}
+	else if (getH()) {
+		r.AF.bytes.high = (r.AF.bytes.high + 0xFA) & 0xFF;
+		resetH();
+	}
+	r.AF.bytes.high == 0 ? setZ() : resetZ();
 
   my_clock.m = 1;
   my_clock.t = 4;
@@ -1164,6 +1212,7 @@ void load_opcodes(void)
   Opcodes[0x05] = &opcode_0x05;
   Opcodes[0x06] = &opcode_0x06;
   Opcodes[0x07] = &opcode_0x07;
+  Opcodes[0x08] = &opcode_0x08;
   Opcodes[0x09] = &opcode_0x09;
   Opcodes[0x0A] = &opcode_0x0a;
   Opcodes[0x0B] = &opcode_0x0b;
@@ -1393,6 +1442,7 @@ void load_opcodes(void)
   Opcodes[0xE5] = &opcode_0xe5;
   Opcodes[0xE6] = &opcode_0xe6;
   Opcodes[0xE7] = &opcode_0xe7;
+  Opcodes[0xE8] = &opcode_0xe8;
   Opcodes[0xE9] = &opcode_0xe9;
   Opcodes[0xEA] = &opcode_0xea;
   Opcodes[0xEE] = &opcode_0xee;
@@ -1404,6 +1454,7 @@ void load_opcodes(void)
   Opcodes[0xF5] = &opcode_0xf5;
   Opcodes[0xF6] = &opcode_0xf6;
   Opcodes[0xF7] = &opcode_0xf7;
+  Opcodes[0xF8] = &opcode_0xf8;
   Opcodes[0xF9] = &opcode_0xf9;
   Opcodes[0xFA] = &opcode_0xfa;
   Opcodes[0xFB] = &opcode_0xfb;

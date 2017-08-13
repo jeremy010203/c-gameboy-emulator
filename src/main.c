@@ -133,7 +133,7 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
   }
   else if (strcmp(input, "show rom\n") == 0)
   {
-    for (int16_t j = r.PC.val - 10; j <= r.PC.val + 10; j++)
+    for (int32_t j = r.PC.val - 10; j <= r.PC.val + 10; j++)
     {
       if (j == r.PC.val)
         printf("-> ");

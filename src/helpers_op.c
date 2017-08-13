@@ -37,7 +37,7 @@ uint16_t pop_stack(void)
 {
   uint8_t v1 = read_memory(++r.SP.val);
   uint16_t v2 = read_memory(++r.SP.val);
-  return (v2 << 8) | v1;
+  return (v2 << 8) + v1;
 }
 
 void inc_op(uint8_t *reg)
@@ -45,7 +45,7 @@ void inc_op(uint8_t *reg)
   uint8_t result = *reg + 1;
 
   result == 0 ? setZ() : resetZ();
-  (((*reg & 0xF) + (uint8_t)1) & 0x10) ? setH() : resetH();
+  (result & 0xF) == 0 ? setH() : resetH();
   resetN();
 
   *reg = result;
@@ -59,7 +59,7 @@ void dec_op(uint8_t *reg)
   //*reg == 0 ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
-  ((*reg & 0xF) - (uint8_t)1) < 0 ? setH() : resetH();
+  (result & 0xF) == 0xF ? setH() : resetH();
   setN();
 
   *reg = result;
@@ -107,6 +107,20 @@ void swap_op(uint8_t *reg)
   my_clock.t = 8;
 }
 
+void adc_op(uint8_t *first, const uint8_t second)
+{
+  uint8_t result = *first + second + getC();
+  (((uint16_t)*first + (uint16_t)second + getC()) > 255) ? setC() : resetC();
+
+  result == 0 ? setZ() : resetZ();
+  (((*first & 0xF) + (second & 0xF) + getC()) & 0x10) ? setH() : resetH();
+  resetN();
+
+  *first = result;
+  my_clock.m = 1;
+  my_clock.t = 4;
+}
+
 void add_8_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = *first + second;
@@ -123,10 +137,13 @@ void add_8_op(uint8_t *first, const uint8_t second)
 
 void add_16_op(uint16_t *first, const uint16_t second)
 {
-  (((uint32_t)*first + (uint32_t)second) > 0xFFFF) ? setC() : resetC();
+  uint32_t result = (uint32_t)*first + (uint32_t)second;
+  ((r.HL.val & 0xFFF) > (result & 0xFFF)) ? setH() : resetH();
+  result > 0xFFFF ? setC() : resetC();
   resetN();
 
-  *first += second;
+  *first = result & 0xFFFF;
+
   my_clock.m = 1;
   my_clock.t = 8;
 }
@@ -137,7 +154,10 @@ void sub_8_op(uint8_t *first, const uint8_t second)
   (*first < second) ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
-  ((*first & 0xF) - (second & 0xF)) < 0 ? setH() : resetH();
+
+  int16_t testf = *first & 0xF;
+  int16_t tests = second & 0xF;
+  (testf - tests) < 0 ? setH() : resetH();
   setN();
 
   *first = result;
@@ -161,8 +181,8 @@ void and_op(uint8_t *first, const uint8_t second)
 {
   *first &= second;
   *first == 0 ? setZ() : resetZ();
-  setH();
   resetN();
+  setH();
   resetC();
 
   my_clock.m = 1;
@@ -173,8 +193,8 @@ void or_op(uint8_t *first, const uint8_t second)
 {
   *first |= second;
   *first == 0 ? setZ() : resetZ();
-  setH();
   resetN();
+  setH();
   resetC();
 
   my_clock.m = 1;
@@ -204,7 +224,7 @@ void ret_cond_op(int cond)
   my_clock.m = 1;
 }
 
-void load(uint8_t* to, const uint8_t from)
+void load(uint8_t *to, const uint8_t from)
 {
   if (!to)
   {
@@ -302,7 +322,10 @@ void sbc_op(uint8_t *first, const uint8_t second)
   (*first < new_second) ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
-  ((*first & 0xF) - ((new_second & 0xF))) < 0 ? setH() : resetH();
+
+  int16_t testf = *first & 0xF;
+  int16_t tests = new_second & 0xF;
+  (testf - tests) < 0 ? setH() : resetH();
   setN();
 
   *first = result;

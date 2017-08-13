@@ -69,10 +69,7 @@ void print_sprites(uint8_t pixels[])
     {
       int line = scanline - yPos;
       if (yFlip)
-      {
-        line -= ysize ;
-        line *= -1 ;
-      }
+        line = -(line - ysize);
 
       line *= 2;
       uint16_t dataAddress = (0x8000 + (tileLocation * 16)) + line;
@@ -83,10 +80,7 @@ void print_sprites(uint8_t pixels[])
       {
         int colourbit = tilePixel;
         if (xFlip)
-        {
-          colourbit -= 7 ;
-          colourbit *= -1 ;
-        }
+          colourbit = -(colourbit - 7);
 
          int colourNum = test_bit(data2, colourbit);
          colourNum <<= 1;
@@ -125,7 +119,6 @@ void print_sprites(uint8_t pixels[])
          }
 
          int pixel = xPos - tilePixel + 7;
-
          const unsigned int offset = (WIDTH * 4 * scanline) + pixel * 4;
          pixels[offset] = red;
          pixels[offset + 1] = green;
@@ -147,77 +140,80 @@ void print_tiles(uint8_t pixels[])
   uint8_t tile_map = test_bit(flags, 3);
   uint8_t tile_set = test_bit(flags, 4);
 
-  uint16_t start_tile = 0;
-  if (!window)
-    start_tile = tile_map ? 0x9c00 : 0x9800;
-  else
-    start_tile = test_bit(flags, 6) ? 0x9c00 : 0x9800;
-
-  uint16_t start_set = tile_set ? 0x8000 : 0x8800;
-
-  uint8_t y = (window ? read_memory(0xFF44) - windowY : read_memory(0xFF44) + scrollY);
-  uint16_t tile_row = ((uint8_t)(y / 8)) * 32;
-
-  for (int j = 0; j < 160; j++)
+  if (test_bit(flags, 0))
   {
-    uint8_t x = j + scrollX;
-    if (window && (j >= windowX))
-      x = j - windowX;
-
-    uint16_t tile_col = x / 8;
-    uint16_t addr = start_tile + tile_row + tile_col;
-    uint16_t tile_loc = start_set;
-    if (!tile_set)
-      tile_loc += (((int)(((int8_t)read_memory(addr)))) + 128) * 16;
+    uint16_t start_tile = 0;
+    if (!window)
+      start_tile = tile_map ? 0x9c00 : 0x9800;
     else
-      tile_loc += ((uint16_t)read_memory(addr)) * 16;
+      start_tile = test_bit(flags, 6) ? 0x9c00 : 0x9800;
 
-    uint8_t line = (y % 8) * 2;
-    uint8_t data1 = read_memory(tile_loc + line);
-    uint8_t data2 = read_memory(tile_loc + line + 1);
+    uint16_t start_set = tile_set ? 0x8000 : 0x8800;
 
-    int colourBit = x % 8 ;
-    colourBit -= 7;
-    colourBit *= -1;
+    uint8_t y = (window ? read_memory(0xFF44) - windowY : read_memory(0xFF44) + scrollY);
+    uint16_t tile_row = ((uint8_t)(y / 8)) * 32;
 
-    int colourNum = test_bit(data2, colourBit);
-    colourNum <<= 1;
-    colourNum |= test_bit(data1, colourBit);
-
-    int col = 0;
-    uint8_t palette = read_memory(0xFF47) ;
-    int hi = 0;
-    int lo = 0;
-
-    switch (colourNum)
+    for (int j = 0; j < 160; j++)
     {
-      case 0: hi = 1; lo = 0; break;
-      case 1: hi = 3; lo = 2; break;
-      case 2: hi = 5; lo = 4; break;
-      case 3: hi = 7; lo = 6; break;
+      uint8_t x = j + scrollX;
+      if (window && (j >= windowX))
+        x = j - windowX;
+
+      uint16_t tile_col = x / 8;
+      uint16_t addr = start_tile + tile_row + tile_col;
+      uint16_t tile_loc = start_set;
+      if (!tile_set)
+        tile_loc += (((int)(((int8_t)read_memory(addr)))) + 128) * 16;
+      else
+        tile_loc += ((uint16_t)read_memory(addr)) * 16;
+
+      uint8_t line = (y % 8) * 2;
+      uint8_t data1 = read_memory(tile_loc + line);
+      uint8_t data2 = read_memory(tile_loc + line + 1);
+
+      int colourBit = x % 8;
+      colourBit -= 7;
+      colourBit *= -1;
+
+      int colourNum = test_bit(data2, colourBit);
+      colourNum <<= 1;
+      colourNum |= test_bit(data1, colourBit);
+
+      int col = 0;
+      uint8_t palette = read_memory(0xFF47) ;
+      int hi = 0;
+      int lo = 0;
+
+      switch (colourNum)
+      {
+        case 0: hi = 1; lo = 0; break;
+        case 1: hi = 3; lo = 2; break;
+        case 2: hi = 5; lo = 4; break;
+        case 3: hi = 7; lo = 6; break;
+      }
+
+      int colour = 0;
+      colour = test_bit(palette, hi) << 1;
+      colour |= test_bit(palette, lo) ;
+      col = colour;
+
+      int red = 0;
+      int green = 0;
+      int blue = 0;
+
+      switch(col)
+      {
+       case 0: red = 255; green = 255; blue = 255; break;
+       case 1: red = 0xCC; green = 0xCC; blue = 0xCC; break;
+       case 2: red = 0x77; green = 0x77; blue = 0x77; break;
+      }
+
+      const unsigned int offset = (WIDTH * 4 * read_memory(0xFF44)) + j * 4;
+      pixels[offset] = red;
+      pixels[offset + 1] = green;
+      pixels[offset + 2] = blue;
+      pixels[offset + 3] = 255;
     }
-
-    int colour = 0;
-    colour = test_bit(palette, hi) << 1;
-    colour |= test_bit(palette, lo) ;
-    col = colour;
-
-    int red = 0;
-    int green = 0;
-    int blue = 0;
-
-    switch(col)
-    {
-     case 0:	red = 255; green = 255; blue = 255; break;
-     case 1:  red = 0xCC; green = 0xCC; blue = 0xCC; break;
-     case 2:	red = 0x77; green = 0x77; blue = 0x77; break;
-    }
-
-    const unsigned int offset = (WIDTH * 4 * read_memory(0xFF44)) + j * 4;
-    pixels[offset] = red;
-    pixels[offset + 1] = green;
-    pixels[offset + 2] = blue;
-    pixels[offset + 3] = 255;
   }
 }
 
