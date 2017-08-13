@@ -3,19 +3,21 @@
 extern Mmu MMU;
 extern Registers r;
 extern My_clock my_clock;
-extern void (*Opcodes[0xFF + 1]) (void);
-extern void (*PrefixCB[0xFF + 1]) (void);
+extern void (*Opcodes[0x100]) (void);
+extern void (*PrefixCB[0x100]) (void);
 
 // Read a byte in memory and increment PC
 uint8_t read_byte(void)
 {
-  return read_memory(r.PC.val++);
+  uint8_t tmp = read_memory(r.PC.val);
+  r.PC.val += 1;
+  return tmp;
 }
 
 // Read a word in memory and increment PC by 2
 uint16_t read_word(void)
 {
-  uint8_t b1 = read_byte();
+  uint16_t b1 = read_byte();
   uint16_t b2 = read_byte();
   b2 <<= 8;
   return b2 | b1;
@@ -29,15 +31,17 @@ uint8_t peak_byte(void)
 
 void push_stack(const uint16_t val)
 {
-  write_memory(r.SP.val--, (uint8_t)(val >> 8));
-  write_memory(r.SP.val--, (uint8_t)((val << 8) >> 8));
+  r.SP.val -= 1;
+  write_memory(r.SP.val, val >> 8);
+  r.SP.val -= 1;
+  write_memory(r.SP.val, val & 0xFF);
 }
 
 uint16_t pop_stack(void)
 {
-  uint8_t v1 = read_memory(++r.SP.val);
-  uint16_t v2 = read_memory(++r.SP.val);
-  return (v2 << 8) + v1;
+  uint16_t v1 = ((((uint16_t)read_memory(r.SP.val + 1)) << 8) | ((uint16_t)read_memory(r.SP.val)));
+  r.SP.val += 2;
+  return v1;
 }
 
 void inc_op(uint8_t *reg)
@@ -94,11 +98,9 @@ void rst_op(const uint16_t addr)
 
 void swap_op(uint8_t *reg)
 {
-  uint8_t high = *reg >> 4;
-  *reg <<= 4;
-  *reg += high;
+  *reg = ((*reg >> 4) | (*reg << 4));
 
-  *reg == 0 ? setZ() : resetZ();
+  (*reg == 0) ? setZ() : resetZ();
   resetC();
   resetN();
   resetH();
@@ -110,10 +112,10 @@ void swap_op(uint8_t *reg)
 void adc_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = *first + second + getC();
-  (((uint16_t)*first + (uint16_t)second + getC()) > 255) ? setC() : resetC();
+  (((*first & 0xF) + (second & 0xF) + getC()) & 0x10) ? setH() : resetH();
+  (((uint16_t)*first + (uint16_t)second + (uint16_t)getC()) > 255) ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
-  (((*first & 0xF) + (second & 0xF) + getC()) & 0x10) ? setH() : resetH();
   resetN();
 
   *first = result;
@@ -155,9 +157,9 @@ void sub_8_op(uint8_t *first, const uint8_t second)
 
   result == 0 ? setZ() : resetZ();
 
-  int16_t testf = *first & 0xF;
-  int16_t tests = second & 0xF;
-  (testf - tests) < 0 ? setH() : resetH();
+  int16_t testf = result & 0xF;
+  int16_t tests = *first & 0xF;
+  testf > tests ? setH() : resetH();
   setN();
 
   *first = result;
@@ -194,7 +196,7 @@ void or_op(uint8_t *first, const uint8_t second)
   *first |= second;
   *first == 0 ? setZ() : resetZ();
   resetN();
-  setH();
+  resetH();
   resetC();
 
   my_clock.m = 1;
@@ -277,9 +279,9 @@ void sla_op(uint8_t *reg)
 
 void srl_op(uint8_t *reg)
 {
-  ((*reg << 7) >> 7) ? setC() : resetC();
+  (*reg & 1) ? setC() : resetC();
   *reg >>= 1;
-  *reg == 0 ? setZ() : resetZ();
+  (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -289,11 +291,11 @@ void srl_op(uint8_t *reg)
 
 void rl_op(uint8_t *reg)
 {
-  uint8_t old_7 = *reg >> 7;
-  *reg = (*reg << 1) + getC();
+  uint8_t carry = (*reg > 0x7F);
+  *reg = ((*reg << 1) | getC());
 
-  old_7 == 1 ? setC() : resetC();
-  *reg == 0 ? setZ() : resetZ();
+  carry ? setC() : resetC();
+  (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -303,11 +305,11 @@ void rl_op(uint8_t *reg)
 
 void rr_op(uint8_t *reg)
 {
-  uint8_t old_0 = (*reg << 7) >> 7;
-  *reg = (*reg >> 1) + (getC() << 7);
+  uint8_t old_0 = (*reg & 1);
+  *reg = ((*reg >> 1) | (getC() << 7));
 
-  old_0 == 1 ? setC() : resetC();
-  *reg == 0 ? setZ() : resetZ();
+  old_0 ? setC() : resetC();
+  (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -317,15 +319,14 @@ void rr_op(uint8_t *reg)
 
 void sbc_op(uint8_t *first, const uint8_t second)
 {
-  uint16_t new_second = second + getC();
-  uint8_t result = *first - (uint8_t)new_second;
-  (*first < new_second) ? setC() : resetC();
+  uint8_t result = (*first - second - getC());
 
-  result == 0 ? setZ() : resetZ();
+  int16_t testf = (*first & 0xF);
+  int16_t tests = (second & 0xF);
+  ((testf - tests - (int16_t)getC()) < 0) ? setH() : resetH();
+  ((int16_t)*first - (int16_t)second - (int16_t)getC() < 0) ? setC() : resetC();
 
-  int16_t testf = *first & 0xF;
-  int16_t tests = new_second & 0xF;
-  (testf - tests) < 0 ? setH() : resetH();
+  (result == 0) ? setZ() : resetZ();
   setN();
 
   *first = result;
@@ -335,14 +336,14 @@ void sbc_op(uint8_t *first, const uint8_t second)
 
 void sra_op(uint8_t *reg)
 {
-  uint8_t old_0 = (*reg << 7) >> 7;
-  uint8_t old_7 = *reg >> 7;
+  uint8_t old_0 = (*reg & 1);
+  uint8_t old_7 = (*reg >> 7);
   old_0 ? setC() : resetC();
 
   *reg >>= 1;
-  *reg += old_7 << 7;
+  *reg |= (old_7 << 7);
 
-  *reg == 0 ? setZ() : resetZ();
+  (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
 

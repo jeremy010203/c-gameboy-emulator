@@ -42,8 +42,8 @@ typedef struct my_clock
 } My_clock;
 
 My_clock my_clock;
-void (*Opcodes[0xFF + 1]) (void);
-void (*PrefixCB[0xFF + 1]) (void);
+void (*Opcodes[0x100]) (void);
+void (*PrefixCB[0x100]) (void);
 Registers r;
 
 void init_registers(void);

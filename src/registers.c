@@ -339,5 +339,5 @@ void loadal()
 // Test if but = 1 with index: 7 6 5 4 3 2 1 0
 int test_bit(const uint8_t byte, const uint8_t index)
 {
-    return (byte & (1 << index)) != 0;
+    return ((byte & (1 << index)) != 0);
 }

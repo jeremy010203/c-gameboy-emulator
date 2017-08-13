@@ -3,8 +3,8 @@
 extern Mmu MMU;
 extern Registers r;
 extern My_clock my_clock;
-extern void (*Opcodes[0xFF + 1]) (void);
-extern void (*PrefixCB[0xFF + 1]) (void);
+extern void (*Opcodes[0x100]) (void);
+extern void (*PrefixCB[0x100]) (void);
 
 void init(void)
 {
@@ -21,7 +21,7 @@ void opcode_0x00(void) { my_clock.m = 1; my_clock.t = 4; }
 void opcode_0xc1(void) { pop_op(&r.BC.val); }
 void opcode_0xd1(void) { pop_op(&r.DE.val); }
 void opcode_0xe1(void) { pop_op(&r.HL.val); }
-void opcode_0xf1(void) { pop_op(&r.AF.val); }
+void opcode_0xf1(void) { pop_op(&r.AF.val); r.AF.val &= 0xFFF0; }
 
 // PUSH OPS
 void opcode_0xc5(void) { push_op(r.BC.val); }
@@ -392,7 +392,7 @@ void opcode_0x96(void)
   my_clock.m = 1;
   my_clock.t = 8;
 }
-void opcode_0x97(void) { sub_8_op(&r.AF.bytes.high, r.AF.bytes.high); }
+void opcode_0x97(void) { r.AF.bytes.high = 0; resetH(); resetC(); setZ(); setN(); my_clock.m = 1; my_clock.t = 4; }
 void opcode_0xd6(void) { sub_8_op(&r.AF.bytes.high, read_byte()); }
 
 // SBC OPS
@@ -596,15 +596,15 @@ void opcode_0xd2(void)
 // ADD SP, r8
 void opcode_0xe8(void)
 {
-  int8_t addr = read_byte();
-  uint16_t result = r.SP.val + addr;
+  int32_t tmp2 = read_byte();
+  uint16_t tmp = r.SP.val + tmp2;
+  tmp2 = r.SP.val ^ tmp2 ^ tmp;
+  r.SP.val = tmp2;
 
-  (result > 255) ? setC() : resetC();
-  (((r.SP.val & 0xF) + (addr & 0xF)) & 0x10) ? setH() : resetH();
+  (tmp2 & 0x100) == 0x100 ? setC() : resetC();
+  (tmp2 & 0x10) == 0x10 ? setH() : resetH();
   resetZ();
   resetN();
-
-  r.SP.val = result;
 
   my_clock.m = 2;
   my_clock.t = 16;
@@ -613,15 +613,14 @@ void opcode_0xe8(void)
 // ADD HL, (SP + r8)
 void opcode_0xf8(void)
 {
-  int8_t addr = read_byte();
-  uint16_t result = r.HL.val + read_memory(r.SP.val + addr);
+  int32_t tmp = read_byte();
+  r.HL.val = r.SP.val + tmp;
+  tmp = r.SP.val ^ tmp ^ r.HL.val;
 
-  (result > 255) ? setC() : resetC();
-  (((r.HL.val & 0xF) + (read_memory(r.SP.val + addr) & 0xF)) & 0x10) ? setH() : resetH();
+  (tmp & 0x100) == 0x100 ? setC() : resetC();
+  (tmp & 0x10) == 0x10 ? setH() : resetH();
   resetZ();
   resetN();
-
-  r.HL.val = result;
 
   my_clock.m = 2;
   my_clock.t = 12;
@@ -691,8 +690,8 @@ void opcode_0x30(void)
 // RRCA
 void opcode_0x0f(void)
 {
-  r.AF.bytes.high = (r.AF.bytes.high >> 1) | ((r.AF.bytes.high & 1) << 7);
-  r.AF.bytes.high > 0x7F ? setC() : resetC();
+  r.AF.bytes.high = ((r.AF.bytes.high >> 1) | ((r.AF.bytes.high & 1) << 7));
+  (r.AF.bytes.high > 0x7F) ? setC() : resetC();
 
   resetZ();
   resetN();
@@ -705,10 +704,10 @@ void opcode_0x0f(void)
 // RLCA
 void opcode_0x07(void)
 {
-  r.AF.bytes.high > 0x7F ? setC() : resetC();
-  r.AF.bytes.high = (r.AF.bytes.high << 1) | getC();
+  (r.AF.bytes.high > 0x7F) ? setC() : resetC();
+  r.AF.bytes.high = ((r.AF.bytes.high << 1) | (r.AF.bytes.high >> 7));
 
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  resetZ();
   resetN();
   resetH();
 
@@ -720,10 +719,10 @@ void opcode_0x07(void)
 void opcode_0x17(void)
 {
   uint8_t carry = getC();
-  r.AF.bytes.high > 0x7F ? setC() : resetC();
-  r.AF.bytes.high = (r.AF.bytes.high << 1) | carry;
+  (r.AF.bytes.high > 0x7F) ? setC() : resetC();
+  r.AF.bytes.high = ((r.AF.bytes.high << 1) | carry);
 
-  r.AF.bytes.high == 0 ? setZ() : resetZ();
+  resetZ();
   resetN();
   resetH();
 
@@ -734,10 +733,10 @@ void opcode_0x17(void)
 // RRA
 void opcode_0x1f(void)
 {
-  uint8_t old_0 = (r.AF.bytes.high << 7) >> 7;
-  r.AF.bytes.high = (r.AF.bytes.high >> 1) + (getC() << 7);
+  uint8_t carry = (getC() << 7);
+  (r.AF.bytes.high & 1) ? setC() : resetC();
+  r.AF.bytes.high = ((r.AF.bytes.high >> 1) | carry);
 
-  old_0 == 1 ? setC() : resetC();
   resetZ();
   resetN();
   resetH();
@@ -891,28 +890,32 @@ void opcode_0x7e(void)
 // DAA
 void opcode_0x27(void)
 {
-  if (!getN()) {
-		if (getC()|| r.AF.bytes.high > 0x99) {
-			r.AF.bytes.high = (r.AF.bytes.high + 0x60) & 0xFF;
-			setC();
-		}
-		if (getH()|| (r.AF.bytes.high& 0xF) > 0x9) {
-			r.AF.bytes.high = (r.AF.bytes.high+ 0x06) & 0xFF;
-      resetH();
-		}
+  if (!getN())
+  {
+    if (getC() || (r.AF.bytes.high > 0x99))
+    {
+      r.AF.bytes.high += 0x60;
+      setC();
+    }
+    if (getH() || ((r.AF.bytes.high & 0x0F) > 0x09))
+    {
+			r.AF.bytes.high += 0x6;
+    }
 	}
-	else if (getC() && getH()) {
-		r.AF.bytes.high = (r.AF.bytes.high + 0x9A) & 0xFF;
-		resetH();
-	}
-	else if (getC()) {
-		r.AF.bytes.high = (r.AF.bytes.high + 0xA0) & 0xFF;
-	}
-	else if (getH()) {
-		r.AF.bytes.high = (r.AF.bytes.high + 0xFA) & 0xFF;
-		resetH();
-	}
-	r.AF.bytes.high == 0 ? setZ() : resetZ();
+  else
+  {
+    if (getC())
+    {
+      r.AF.bytes.high -= 0x60;
+    }
+    if (getH())
+    {
+  		r.AF.bytes.high -= 0x6;
+    }
+  }
+
+  (r.AF.bytes.high == 0) ? setZ() : resetZ();
+  resetH();
 
   my_clock.m = 1;
   my_clock.t = 4;
@@ -974,24 +977,7 @@ void prefix_0x32(void) { swap_op(&r.DE.bytes.high); }
 void prefix_0x33(void) { swap_op(&r.DE.bytes.low); }
 void prefix_0x34(void) { swap_op(&r.HL.bytes.high); }
 void prefix_0x35(void) { swap_op(&r.HL.bytes.low); }
-
-// SWAP (HL)
-void prefix_0x36(void)
-{
-  uint8_t high = read_memory(r.HL.val) << 4;
-  uint8_t low  = read_memory(r.HL.val) >> 4;
-  write_memory(r.HL.val, high + low);
-
-  read_memory(r.HL.val) == 0 ? setZ() : resetZ();
-  resetC();
-  resetN();
-  resetH();
-
-  my_clock.m = 2;
-  my_clock.t = 16;
-}
-
-// SWAP A
+void prefix_0x36(void) { swap_op(&MMU.memory[r.HL.val]); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x37(void) { swap_op(&r.AF.bytes.high); }
 
 // SLR OPS
@@ -1013,6 +999,7 @@ void prefix_0x44(void) { bit_op(r.HL.bytes.high, 0); }
 void prefix_0x45(void) { bit_op(r.HL.bytes.low, 0); }
 void prefix_0x46(void) { bit_op(read_memory(r.HL.val), 0); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x47(void) { bit_op(r.AF.bytes.high, 0); }
+
 void prefix_0x48(void) { bit_op(r.BC.bytes.high, 1); }
 void prefix_0x49(void) { bit_op(r.BC.bytes.low, 1); }
 void prefix_0x4a(void) { bit_op(r.DE.bytes.high, 1); }
@@ -1021,6 +1008,7 @@ void prefix_0x4c(void) { bit_op(r.HL.bytes.high, 1); }
 void prefix_0x4d(void) { bit_op(r.HL.bytes.low, 1); }
 void prefix_0x4e(void) { bit_op(read_memory(r.HL.val), 1); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x4f(void) { bit_op(r.AF.bytes.high, 1); }
+
 void prefix_0x50(void) { bit_op(r.BC.bytes.high, 2); }
 void prefix_0x51(void) { bit_op(r.BC.bytes.low, 2); }
 void prefix_0x52(void) { bit_op(r.DE.bytes.high, 2); }
@@ -1029,6 +1017,7 @@ void prefix_0x54(void) { bit_op(r.HL.bytes.high, 2); }
 void prefix_0x55(void) { bit_op(r.HL.bytes.low, 2); }
 void prefix_0x56(void) { bit_op(read_memory(r.HL.val), 2); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x57(void) { bit_op(r.AF.bytes.high, 2); }
+
 void prefix_0x58(void) { bit_op(r.BC.bytes.high, 3); }
 void prefix_0x59(void) { bit_op(r.BC.bytes.low, 3); }
 void prefix_0x5a(void) { bit_op(r.DE.bytes.high, 3); }
@@ -1037,6 +1026,7 @@ void prefix_0x5c(void) { bit_op(r.HL.bytes.high, 3); }
 void prefix_0x5d(void) { bit_op(r.HL.bytes.low, 3); }
 void prefix_0x5e(void) { bit_op(read_memory(r.HL.val), 3); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x5f(void) { bit_op(r.AF.bytes.high, 3); }
+
 void prefix_0x60(void) { bit_op(r.BC.bytes.high, 4); }
 void prefix_0x61(void) { bit_op(r.BC.bytes.low, 4); }
 void prefix_0x62(void) { bit_op(r.DE.bytes.high, 4); }
@@ -1045,6 +1035,7 @@ void prefix_0x64(void) { bit_op(r.HL.bytes.high, 4); }
 void prefix_0x65(void) { bit_op(r.HL.bytes.low, 4); }
 void prefix_0x66(void) { bit_op(read_memory(r.HL.val), 4); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x67(void) { bit_op(r.AF.bytes.high, 4); }
+
 void prefix_0x68(void) { bit_op(r.BC.bytes.high, 5); }
 void prefix_0x69(void) { bit_op(r.BC.bytes.low, 5); }
 void prefix_0x6a(void) { bit_op(r.DE.bytes.high, 5); }
@@ -1053,6 +1044,7 @@ void prefix_0x6c(void) { bit_op(r.HL.bytes.high, 5); }
 void prefix_0x6d(void) { bit_op(r.HL.bytes.low, 5); }
 void prefix_0x6e(void) { bit_op(read_memory(r.HL.val), 5); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x6f(void) { bit_op(r.AF.bytes.high, 5); }
+
 void prefix_0x70(void) { bit_op(r.BC.bytes.high, 6); }
 void prefix_0x71(void) { bit_op(r.BC.bytes.low, 6); }
 void prefix_0x72(void) { bit_op(r.DE.bytes.high, 6); }
@@ -1061,6 +1053,7 @@ void prefix_0x74(void) { bit_op(r.HL.bytes.high, 6); }
 void prefix_0x75(void) { bit_op(r.HL.bytes.low, 6); }
 void prefix_0x76(void) { bit_op(read_memory(r.HL.val), 6); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x77(void) { bit_op(r.AF.bytes.high, 6); }
+
 void prefix_0x78(void) { bit_op(r.BC.bytes.high, 7); }
 void prefix_0x79(void) { bit_op(r.BC.bytes.low, 7); }
 void prefix_0x7a(void) { bit_op(r.DE.bytes.high, 7); }
@@ -1079,6 +1072,7 @@ void prefix_0x84(void) { res_op(&r.HL.bytes.high, 0); }
 void prefix_0x85(void) { res_op(&r.HL.bytes.low, 0); }
 void prefix_0x86(void) { res_op(&MMU.memory[r.HL.val], 0); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x87(void) { res_op(&r.AF.bytes.high, 0); }
+
 void prefix_0x88(void) { res_op(&r.BC.bytes.high, 1); }
 void prefix_0x89(void) { res_op(&r.BC.bytes.low, 1); }
 void prefix_0x8a(void) { res_op(&r.DE.bytes.high, 1); }
@@ -1087,6 +1081,7 @@ void prefix_0x8c(void) { res_op(&r.HL.bytes.high, 1); }
 void prefix_0x8d(void) { res_op(&r.HL.bytes.low, 1); }
 void prefix_0x8e(void) { res_op(&MMU.memory[r.HL.val], 1); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x8f(void) { res_op(&r.AF.bytes.high, 1); }
+
 void prefix_0x90(void) { res_op(&r.BC.bytes.high, 2); }
 void prefix_0x91(void) { res_op(&r.BC.bytes.low, 2); }
 void prefix_0x92(void) { res_op(&r.DE.bytes.high, 2); }
@@ -1095,6 +1090,7 @@ void prefix_0x94(void) { res_op(&r.HL.bytes.high, 2); }
 void prefix_0x95(void) { res_op(&r.HL.bytes.low, 2); }
 void prefix_0x96(void) { res_op(&MMU.memory[r.HL.val], 2); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x97(void) { res_op(&r.AF.bytes.high, 2); }
+
 void prefix_0x98(void) { res_op(&r.BC.bytes.high, 3); }
 void prefix_0x99(void) { res_op(&r.BC.bytes.low, 3); }
 void prefix_0x9a(void) { res_op(&r.DE.bytes.high, 3); }
@@ -1103,6 +1099,7 @@ void prefix_0x9c(void) { res_op(&r.HL.bytes.high, 3); }
 void prefix_0x9d(void) { res_op(&r.HL.bytes.low, 3); }
 void prefix_0x9e(void) { res_op(&MMU.memory[r.HL.val], 3); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0x9f(void) { res_op(&r.AF.bytes.high, 3); }
+
 void prefix_0xa0(void) { res_op(&r.BC.bytes.high, 4); }
 void prefix_0xa1(void) { res_op(&r.BC.bytes.low, 4); }
 void prefix_0xa2(void) { res_op(&r.DE.bytes.high, 4); }
@@ -1111,6 +1108,7 @@ void prefix_0xa4(void) { res_op(&r.HL.bytes.high, 4); }
 void prefix_0xa5(void) { res_op(&r.HL.bytes.low, 4); }
 void prefix_0xa6(void) { res_op(&MMU.memory[r.HL.val], 4); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xa7(void) { res_op(&r.AF.bytes.high, 4); }
+
 void prefix_0xa8(void) { res_op(&r.BC.bytes.high, 5); }
 void prefix_0xa9(void) { res_op(&r.BC.bytes.low, 5); }
 void prefix_0xaa(void) { res_op(&r.DE.bytes.high, 5); }
@@ -1119,6 +1117,7 @@ void prefix_0xac(void) { res_op(&r.HL.bytes.high, 5); }
 void prefix_0xad(void) { res_op(&r.HL.bytes.low, 5); }
 void prefix_0xae(void) { res_op(&MMU.memory[r.HL.val], 5); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xaf(void) { res_op(&r.AF.bytes.high, 5); }
+
 void prefix_0xb0(void) { res_op(&r.BC.bytes.high, 6); }
 void prefix_0xb1(void) { res_op(&r.BC.bytes.low, 6); }
 void prefix_0xb2(void) { res_op(&r.DE.bytes.high, 6); }
@@ -1127,6 +1126,7 @@ void prefix_0xb4(void) { res_op(&r.HL.bytes.high, 6); }
 void prefix_0xb5(void) { res_op(&r.HL.bytes.low, 6); }
 void prefix_0xb6(void) { res_op(&MMU.memory[r.HL.val], 6); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xb7(void) { res_op(&r.AF.bytes.high, 6); }
+
 void prefix_0xb8(void) { res_op(&r.BC.bytes.high, 7); }
 void prefix_0xb9(void) { res_op(&r.BC.bytes.low, 7); }
 void prefix_0xba(void) { res_op(&r.DE.bytes.high, 7); }
@@ -1145,6 +1145,7 @@ void prefix_0xc4(void) { set_op(&r.HL.bytes.high, 0); }
 void prefix_0xc5(void) { set_op(&r.HL.bytes.low, 0); }
 void prefix_0xc6(void) { set_op(&MMU.memory[r.HL.val], 0); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xc7(void) { set_op(&r.AF.bytes.high, 0); }
+
 void prefix_0xc8(void) { set_op(&r.BC.bytes.high, 1); }
 void prefix_0xc9(void) { set_op(&r.BC.bytes.low, 1); }
 void prefix_0xca(void) { set_op(&r.DE.bytes.high, 1); }
@@ -1153,6 +1154,7 @@ void prefix_0xcc(void) { set_op(&r.HL.bytes.high, 1); }
 void prefix_0xcd(void) { set_op(&r.HL.bytes.low, 1); }
 void prefix_0xce(void) { set_op(&MMU.memory[r.HL.val], 1); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xcf(void) { set_op(&r.AF.bytes.high, 1); }
+
 void prefix_0xd0(void) { set_op(&r.BC.bytes.high, 2); }
 void prefix_0xd1(void) { set_op(&r.BC.bytes.low, 2); }
 void prefix_0xd2(void) { set_op(&r.DE.bytes.high, 2); }
@@ -1161,6 +1163,7 @@ void prefix_0xd4(void) { set_op(&r.HL.bytes.high, 2); }
 void prefix_0xd5(void) { set_op(&r.HL.bytes.low, 2); }
 void prefix_0xd6(void) { set_op(&MMU.memory[r.HL.val], 2); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xd7(void) { set_op(&r.AF.bytes.high, 2); }
+
 void prefix_0xd8(void) { set_op(&r.BC.bytes.high, 3); }
 void prefix_0xd9(void) { set_op(&r.BC.bytes.low, 3); }
 void prefix_0xda(void) { set_op(&r.DE.bytes.high, 3); }
@@ -1169,6 +1172,7 @@ void prefix_0xdc(void) { set_op(&r.HL.bytes.high, 3); }
 void prefix_0xdd(void) { set_op(&r.HL.bytes.low, 3); }
 void prefix_0xde(void) { set_op(&MMU.memory[r.HL.val], 3); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xdf(void) { set_op(&r.AF.bytes.high, 3); }
+
 void prefix_0xe0(void) { set_op(&r.BC.bytes.high, 4); }
 void prefix_0xe1(void) { set_op(&r.BC.bytes.low, 4); }
 void prefix_0xe2(void) { set_op(&r.DE.bytes.high, 4); }
@@ -1177,6 +1181,7 @@ void prefix_0xe4(void) { set_op(&r.HL.bytes.high, 4); }
 void prefix_0xe5(void) { set_op(&r.HL.bytes.low, 4); }
 void prefix_0xe6(void) { set_op(&MMU.memory[r.HL.val], 4); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xe7(void) { set_op(&r.AF.bytes.high, 4); }
+
 void prefix_0xe8(void) { set_op(&r.BC.bytes.high, 5); }
 void prefix_0xe9(void) { set_op(&r.BC.bytes.low, 5); }
 void prefix_0xea(void) { set_op(&r.DE.bytes.high, 5); }
@@ -1185,6 +1190,7 @@ void prefix_0xec(void) { set_op(&r.HL.bytes.high, 5); }
 void prefix_0xed(void) { set_op(&r.HL.bytes.low, 5); }
 void prefix_0xee(void) { set_op(&MMU.memory[r.HL.val], 5); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xef(void) { set_op(&r.AF.bytes.high, 5); }
+
 void prefix_0xf0(void) { set_op(&r.BC.bytes.high, 6); }
 void prefix_0xf1(void) { set_op(&r.BC.bytes.low, 6); }
 void prefix_0xf2(void) { set_op(&r.DE.bytes.high, 6); }
@@ -1193,6 +1199,7 @@ void prefix_0xf4(void) { set_op(&r.HL.bytes.high, 6); }
 void prefix_0xf5(void) { set_op(&r.HL.bytes.low, 6); }
 void prefix_0xf6(void) { set_op(&MMU.memory[r.HL.val], 6); my_clock.m = 2; my_clock.t = 16; }
 void prefix_0xf7(void) { set_op(&r.AF.bytes.high, 6); }
+
 void prefix_0xf8(void) { set_op(&r.BC.bytes.high, 7); }
 void prefix_0xf9(void) { set_op(&r.BC.bytes.low, 7); }
 void prefix_0xfa(void) { set_op(&r.DE.bytes.high, 7); }

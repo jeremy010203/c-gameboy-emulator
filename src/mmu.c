@@ -180,7 +180,7 @@ void write_memory(uint16_t addr, uint8_t val)
  }
 
   // Read only
-  if ((addr >= 0xFEA0 ) && (addr < 0xFEFF))
+  if ((addr >= 0xFEA0) && (addr < 0xFEFF))
     return;
 
   // Detect disable boot rom
@@ -204,7 +204,7 @@ void write_memory(uint16_t addr, uint8_t val)
   }
 
   MMU.memory[addr] = val;
-  if ((addr >= 0xE000 ) && (addr < 0xFE00))
+  if ((addr >= 0xE000) && (addr < 0xFE00))
     write_memory(addr - 0x2000, val);
 }
 
