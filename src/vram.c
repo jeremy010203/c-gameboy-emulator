@@ -18,7 +18,7 @@ static void print_tile(uint8_t pixels[], uint16_t addr, int x, int y)
     for (uint16_t j = 0; j < 8; j++)
     {
       uint8_t d = 1 << (7 - j);
-      uint8_t val = ((read_memory(l1) & d) ? 1 : 0) + ((read_memory(l2) & d) ? 2 : 0);
+      uint8_t val = ((MMU.memory[l1] & d) ? 1 : 0) + ((MMU.memory[l2] & d) ? 2 : 0);
 
       uint8_t red = 0;
       uint8_t green = 0;

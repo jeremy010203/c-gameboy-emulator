@@ -21,7 +21,7 @@ void opcode_0x00(void) { my_clock.m = 1; my_clock.t = 4; }
 void opcode_0x10(void)
 {
   // Test for speed switch
-  if (test_bit(read_memory(0xFF4D), 0))
+  if (test_bit(MMU.memory[0xFF4D], 0))
   {
     // TODO: Handle speed switch
   }
@@ -1818,35 +1818,31 @@ void load_prefixcb(void)
 void update_timers(void)
 {
   my_clock.divider += my_clock.m;
-  if (my_clock.divider >= 255)
-  {
-      my_clock.divider = 0;
-      MMU.memory[0xFF04]++;
-  }
 
-  if (test_bit(read_memory(0xFF07), 2))
+  if (test_bit(MMU.memory[0xFF07], 2))
   {
-    my_clock.timer_counter -= my_clock.m;
-    if (my_clock.timer_counter <= 0)
+    my_clock.timer_counter += my_clock.m;
+
+    if (my_clock.timer_counter >= my_clock.clock_speed)
     {
-      switch(read_memory(0xFF07) & 0x3)
-      {
-        case 0: my_clock.timer_counter = 1024; break;
-        case 1: my_clock.timer_counter = 16; break;
-        case 2: my_clock.timer_counter = 64; break;
-        case 3: my_clock.timer_counter = 256; break;
-      }
+      my_clock.timer_counter = 0;
 
-      if (read_memory(0xFF05) == 255)
+      if (MMU.memory[0xFF05] == 255)
       {
-          write_memory(0xFF05, read_memory(0xFF06));
+          MMU.memory[0xFF05] = MMU.memory[0xFF06];
           request_interupt(2);
       }
       else
       {
-        write_memory(0xFF05, read_memory(0xFF05) + 1);
+        MMU.memory[0xFF05]++;
       }
     }
+  }
+
+  if (my_clock.divider >= 256)
+  {
+      my_clock.divider = 0;
+      MMU.memory[0xFF04]++;
   }
 }
 
@@ -1858,30 +1854,32 @@ static void my_clock_handling(uint8_t pixels[], int *display)
   my_clock.lineticks += my_clock.m;
   update_timers();
 
+
   switch (my_clock.mode)
   {
     case 0:
       if (my_clock.lineticks > 203)
       {
-        if (read_memory(0xFF44) == 143)
+        if (MMU.memory[0xFF44] == 143)
         {
           my_clock.mode = 1;
-          write_memory(0xFF41, read_memory(0xFF41) | (1 << 0));
-          write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 1));
-          if (test_bit(read_memory(0xFF41), 4))
+
+          MMU.memory[0xFF41] |= (1 << 0);
+          MMU.memory[0xFF41] &= ~(1 << 1);
+          if (test_bit(MMU.memory[0xFF41], 4))
             request_interupt(1);
         }
         else
         {
           my_clock.mode = 2;
-          write_memory(0xFF41, read_memory(0xFF41) | (1 << 1));
-          write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 0));
-          if (test_bit(read_memory(0xFF41), 5))
+          MMU.memory[0xFF41] |= (1 << 1);
+          MMU.memory[0xFF41] &= ~(1 << 0);
+          if (test_bit(MMU.memory[0xFF41], 5))
             request_interupt(1);
         }
         my_clock.lineticks = 0;
 
-        uint8_t flag = read_memory(0xFF40);
+        uint8_t flag = MMU.memory[0xFF40];
         if (test_bit(flag, 0))
           print_tiles(pixels);
         if (test_bit(flag, 1))
@@ -1891,7 +1889,7 @@ static void my_clock_handling(uint8_t pixels[], int *display)
       }
       break;
     case 1: // VBLANK
-      if (my_clock.lineticks >= 456 && read_memory(0xFF44) == 153)
+      if (my_clock.lineticks >= 456 && MMU.memory[0xFF44] == 153)
       {
         my_clock.mode = 2;
         my_clock.lineticks = 0;
@@ -1927,8 +1925,8 @@ static void my_clock_handling(uint8_t pixels[], int *display)
       {
         my_clock.mode = 3;
         my_clock.lineticks = 0;
-        write_memory(0xFF41, read_memory(0xFF41) | (1 << 0));
-        write_memory(0xFF41, read_memory(0xFF41) | (1 << 1));
+        MMU.memory[0xFF41] |= (1 << 0);
+        MMU.memory[0xFF41] |= (1 << 1);
       }
       break;
     case 3:
@@ -1936,24 +1934,24 @@ static void my_clock_handling(uint8_t pixels[], int *display)
       {
         my_clock.mode = 0;
         my_clock.lineticks = 0;
-        write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 0));
-        write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 1));
-        if (test_bit(read_memory(0xFF41), 3))
+        MMU.memory[0xFF41] &= ~(1 << 0);
+        MMU.memory[0xFF41] &= ~(1 << 1);
+        if (test_bit(MMU.memory[0xFF41], 3))
           request_interupt(1);
       }
       break;
   }
 
   // check the conincidence flag
-   if (read_memory(0xFF44) == read_memory(0xFF45))
+   if (MMU.memory[0xFF44] == MMU.memory[0xFF45])
    {
-     write_memory(0xFF41, read_memory(0xFF41) | (1 << 2));
-     if (test_bit(read_memory(0xFF41), 6))
+     MMU.memory[0xFF41] |= (1 << 2);
+     if (test_bit(MMU.memory[0xFF41], 6))
        request_interupt(1);
    }
    else
    {
-     write_memory(0xFF41, read_memory(0xFF41) & ~(1 << 2));
+     MMU.memory[0xFF41] &= ~(1 << 2);
    }
 }
 

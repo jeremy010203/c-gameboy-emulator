@@ -80,8 +80,11 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
       //  break;
       //}
 
-      if (trace)
+      if (trace && !MMU.BIOS_MODE)
+      {
         printf("At 0x%x : 0x%x\n", r.PC.val - 1, op);
+        print_r();
+      }
       int a = 0;
       execute(op, pixels, &a);
 
@@ -144,7 +147,7 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
       if (j == r.PC.val)
         printf("-> ");
       if (j >= 0)
-        printf("%2x \n", read_memory(j));
+        printf("%2x \n", MMU.memory[j]);
     }
   }
   else if (strcmp(input, "show tilemap\n") == 0)
@@ -152,7 +155,7 @@ void debug_mode(SDL_Renderer *renderer, SDL_Texture *texture, uint8_t pixels[], 
     int i = 0;
     for (uint16_t j = 0x9800; j <= 0x9BFF; j++)
     {
-      printf("%2x ", read_memory(j));
+      printf("%2x ", MMU.memory[j]);
       i++;
       if (i % 32 == 0)
         printf("\n");
@@ -316,10 +319,16 @@ int main(int argc, char *args[])
     else
     {
       uint8_t op = read_byte();
-      if (MMU.HALT)
-        r.PC.val--;
       int a = 0;
-      execute(op, pixels, &a);
+
+      if (MMU.HALT)
+      {
+        r.PC.val--;
+        my_clock.m = 1;
+        my_clock.t = 4;
+      } else {
+        execute(op, pixels, &a);
+      }
 
       if (renderer && a)
       {

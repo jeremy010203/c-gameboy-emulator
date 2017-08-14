@@ -60,7 +60,7 @@ void print_memory(uint16_t from, uint16_t to)
 {
   for (uint16_t i = from; i <=to; i++)
   {
-    printf("%x - %x\n", i, read_memory(i));
+    printf("%x - %x\n", i, MMU.memory[i]);
   }
 }
 
@@ -250,17 +250,21 @@ void write_memory(uint16_t addr, uint8_t val)
   }
   else if (addr == 0xFF07) // TMC reg
   {
-    uint8_t freq = (read_memory(addr) & 0x3);
     MMU.memory[addr] = val;
-    if (freq != val)
+    uint8_t timer = (val & 0x03);
+    int clock_speed = 0;
+    switch(timer)
     {
-      switch(read_memory(0xFF07) & 0x3)
-      {
-        case 0: my_clock.timer_counter = 1024; break;
-        case 1: my_clock.timer_counter = 16; break;
-        case 2: my_clock.timer_counter = 64; break;
-        case 3: my_clock.timer_counter = 256; break;
-      }
+      case 0: clock_speed = 1024; break;
+      case 1: clock_speed = 16; break;
+      case 2: clock_speed = 64; break;
+      case 3: clock_speed = 256; break;
+    }
+
+    if (my_clock.timer_counter != clock_speed)
+    {
+      my_clock.timer_counter = 0;
+      my_clock.clock_speed= clock_speed;
     }
   }
   else if (addr == 0xFF46)
@@ -268,7 +272,7 @@ void write_memory(uint16_t addr, uint8_t val)
     uint16_t address = val << 8;
     for (int i = 0 ; i < 0xA0; i++)
     {
-      write_memory(0xFE00 + i, read_memory(address + i)) ;
+      MMU.memory[0xFE00 + i] = MMU.memory[address + i];
     }
   }
   else
@@ -280,24 +284,24 @@ void write_memory(uint16_t addr, uint8_t val)
 void request_interupt(uint8_t val)
 {
   // printf("Request interupt: %u\n", val);
-  uint8_t mem = read_memory(0xFF0F);
+  uint8_t mem = MMU.memory[0xFF0F];
   mem |= (1 << val);
-  write_memory(0xFF0F, mem);
+  MMU.memory[0xFF0F] =  mem;
 }
 
 void do_interupt(void)
 {
   if (r.ime)
   {
-    uint8_t mem = read_memory(0xFF0F);
-    uint8_t ena = read_memory(0xFFFF);
+    uint8_t mem = MMU.memory[0xFF0F];
+    uint8_t ena = MMU.memory[0xFFFF];
     if (mem > 0)
     {
         for (uint8_t i = 0; i < 5; i++)
         {
           if (test_bit(mem, i) && test_bit(ena, i))
           {
-            //printf("Execute interupt: %u\n", i);
+            // printf("Execute interupt: %u\n", i);
             execute_interupt(i);
             return;
           }
@@ -311,9 +315,9 @@ void execute_interupt(uint8_t i)
   MMU.HALT = 0;
   r.ime = 0;
 
-  uint8_t mem = read_memory(0xFF0F);
+  uint8_t mem = MMU.memory[0xFF0F];
   mem &= ~(1 << i);
-  write_memory(0xFF0F, mem);
+  MMU.memory[0xFF0F] = mem;
 
   push_stack(r.PC.val);
   switch (i)

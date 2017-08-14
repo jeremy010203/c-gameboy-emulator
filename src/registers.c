@@ -8,7 +8,7 @@ void init_registers()
   r.HL.val = 0;
   r.SP.val = 0;
   r.PC.val = 0;
-  r.ime = 1;
+  r.ime = 0;
   r.joypad = 0xFF;
   my_clock.total_m = 0;
   my_clock.total_t = 0;
@@ -16,6 +16,7 @@ void init_registers()
   my_clock.mode = 2;
   my_clock.divider = 0;
   my_clock.timer_counter = 0;
+  my_clock.clock_speed = 1024;
 }
 
 void print_r()
@@ -28,6 +29,7 @@ void print_r()
     printf("SP: %x\n", r.SP.val);
     printf("PC: %x\n", r.PC.val);
     printf("PAD: %x\n", r.joypad);
+    printf("IME: %x\n", r.ime);
     printf("---------------\n");
 }
 

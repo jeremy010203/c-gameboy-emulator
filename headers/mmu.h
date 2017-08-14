@@ -9,8 +9,8 @@
 typedef struct Mmu
 {
   uint8_t memory[0x10000];
-  uint8_t ram[0x200000];
-  uint8_t game[0x200000];
+  uint8_t ram[0x2000000];
+  uint8_t game[0x2000000];
   uint8_t MBC1;
   uint8_t MBC2;
   uint8_t CUR_ROM;

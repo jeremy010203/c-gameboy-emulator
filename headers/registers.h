@@ -40,6 +40,7 @@ typedef struct my_clock
   uint16_t lineticks;
   uint16_t divider;
   int timer_counter;
+  int clock_speed;
 } My_clock;
 
 My_clock my_clock;
