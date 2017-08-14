@@ -1887,7 +1887,7 @@ static void my_clock_handling(uint8_t pixels[], int *display)
         if (test_bit(flag, 1))
           print_sprites(pixels);
 
-        write_memory(0xFF44, read_memory(0xFF44) + 1);
+        MMU.memory[0xFF44] += 1;
       }
       break;
     case 1: // VBLANK
@@ -1895,7 +1895,7 @@ static void my_clock_handling(uint8_t pixels[], int *display)
       {
         my_clock.mode = 2;
         my_clock.lineticks = 0;
-        write_memory(0xFF44, 0);
+        MMU.memory[0xFF44] = 0;
         request_interupt(0);
 
         // BEGIN SYNCHRONIZED DISPLAY LOGIC
@@ -1919,7 +1919,7 @@ static void my_clock_handling(uint8_t pixels[], int *display)
       else if (my_clock.lineticks >= 456)
       {
         my_clock.lineticks = 0;
-        write_memory(0xFF44, read_memory(0xFF44) + 1);
+        MMU.memory[0xFF44] += 1;
       }
       break;
     case 2:

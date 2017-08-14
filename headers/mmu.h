@@ -9,7 +9,7 @@
 typedef struct Mmu
 {
   uint8_t memory[0x10000];
-  uint8_t ram[0x10000];
+  uint8_t ram[0x200000];
   uint8_t game[0x200000];
   uint8_t MBC1;
   uint8_t MBC2;
@@ -18,6 +18,8 @@ typedef struct Mmu
   uint8_t ENABLE_RAM;
   uint8_t ROM_BANKING;
   uint8_t HALT;
+  uint8_t MEMORY_MODEL;
+  uint8_t BIOS_MODE;
   char *path_rom;
 } Mmu;
 

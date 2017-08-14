@@ -14,6 +14,8 @@ void init_mmu(char *path)
   MMU.CUR_RAM = 0;
   MMU.ROM_BANKING = 0;
   MMU.HALT = 0;
+  MMU.MEMORY_MODEL = 1;
+  MMU.BIOS_MODE = 1;
 }
 
 void load_bios(char *path)
@@ -85,12 +87,13 @@ uint8_t read_memory(uint16_t addr)
   if ((addr >= 0x4000) && (addr <= 0x7FFF))
   {
     unsigned int new_addr = addr;
-    addr += ((MMU.CUR_ROM - 1) * 0x4000);
+    new_addr += ((MMU.CUR_ROM - 1) * 0x4000);
     return MMU.game[new_addr];
   }
   else if ((addr >= 0xA000) && (addr <= 0xBFFF))
   {
-    return MMU.ram[(addr - 0xA000) + (MMU.CUR_RAM * 0x2000)];
+    unsigned int addr2 = (addr - 0xA000) + (MMU.CUR_RAM * 0x2000);
+    return MMU.ram[addr2];
   }
 
   // Catch joypad request
@@ -101,107 +104,149 @@ uint8_t read_memory(uint16_t addr)
   return MMU.memory[addr];
 }
 
-void handle_bank_enable(uint16_t addr, uint8_t val)
-{
-  if (MMU.MBC2 && test_bit(addr, 4))
-    return;
-
-  if ((val & 0xF) == 0xA)
-    MMU.ENABLE_RAM = 1;
-  else if ((val & 0xF) == 0x0)
-    MMU.ENABLE_RAM = 0;
-}
-
-void DoChangeLoROMBank(uint8_t val)
-{
-   if (MMU.MBC2)
-   {
-     MMU.CUR_ROM = val & 0xF;
-     if (MMU.CUR_ROM == 0) MMU.CUR_ROM++;
-     return;
-   }
-
-   uint8_t lower5 = val & 31;
-   MMU.CUR_ROM &= 224;
-   MMU.CUR_ROM |= lower5;
-   if (MMU.CUR_ROM == 0) MMU.CUR_ROM++;
-}
-
-void DoChangeHiRomBank(uint8_t data)
-{
-   MMU.CUR_ROM &= 31;
-
-   data &= 224;
-   MMU.CUR_ROM |= data;
-   if (MMU.CUR_ROM == 0) MMU.CUR_ROM++;
-}
-
-void DoRAMBankChange(uint8_t data)
-{
-   MMU.CUR_RAM = data & 0x3;
-}
-
-void DoChangeROMRAMMode(uint8_t data)
-{
-   uint8_t newData = data & 0x1;
-   MMU.ROM_BANKING = (newData == 0);
-   if (MMU.ROM_BANKING)
-     MMU.CUR_RAM = 0;
-}
-
 void write_memory(uint16_t addr, uint8_t val)
 {
-  if (addr < 0x8000)
+  if (MMU.BIOS_MODE)
   {
-    if (addr < 0x2000 && (MMU.MBC1 || MMU.MBC2))
-    {
-        handle_bank_enable(addr, val);
-    }
-   else if (((addr >= 0x2000) && (addr < 0x4000)) && (MMU.MBC1 || MMU.MBC2))
+    if (addr == 0xFF50 && val == 1)
    {
-       DoChangeLoROMBank(val);
+     load_rom(MMU.path_rom);
+     MMU.BIOS_MODE = 0;
    }
-   else if (((addr >= 0x4000) && (addr < 0x6000)) && MMU.MBC1)
-   {
-       if(MMU.ROM_BANKING)
-         DoChangeHiRomBank(val);
-       else
-         DoRAMBankChange(val);
-   }
-   else if (((addr >= 0x6000) && (addr < 0x8000)) && MMU.MBC1)
-   {
-       DoChangeROMRAMMode(val);
-   }
+   MMU.memory[addr] = val;
    return;
- }
- else if (((addr >= 0xA000) && (addr < 0xC000)) && MMU.ENABLE_RAM)
+  }
+
+  if (addr < 0x2000)
   {
-      MMU.ram[(addr - 0xA000) + (MMU.CUR_RAM * 0x2000)] = val;
-      return;
+      if (MMU.MBC1)
+	    {
+            if ((val & 0xF) == 0xA)
+                MMU.ENABLE_RAM = 1;
+            else if (val == 0x0)
+                MMU.ENABLE_RAM = 0;
+	    }
+	    else if (MMU.MBC2)
+	    {
+        //bit 0 of upper byte must be 0
+	     if (0 == test_bit(addr >> 8, 0))
+	     {
+	         if ((val & 0xF) == 0xA)
+                MMU.ENABLE_RAM = 1;
+            else if (val == 0x0)
+                MMU.ENABLE_RAM = 0;
+	     }
+	    }
+    }
+   else if ((addr >= 0x2000) && (addr < 0x4000))
+   {
+     if (MMU.MBC1)
+    {
+      if (val == 0x00)
+        val++;
+
+      val &= 31;
+
+      // Turn off the lower 5-bits.
+      MMU.CUR_ROM &= 224;
+
+      // Combine the written data with the register.
+      MMU.CUR_ROM |= val;
+    }
+    else if (MMU.MBC2)
+    {
+      val &= 0xF;
+      MMU.CUR_ROM = val;
+    }
+   }
+   else if (((addr >= 0x4000) && (addr < 0x6000)))
+   {
+     if (MMU.MBC1)
+    {
+      // are we using memory model 16/8
+      if (MMU.MEMORY_MODEL)
+      {
+        // in this mode we can only use Ram Bank 0
+        MMU.CUR_RAM = 0 ;
+
+        val &= 3;
+        val <<= 5;
+
+        if ((MMU.CUR_ROM & 31) == 0)
+        {
+          val++;
+        }
+
+        // Turn off bits 5 and 6, and 7 if it somehow got turned on.
+        MMU.CUR_ROM &= 31;
+
+        // Combine the written data with the register.
+        MMU.CUR_ROM |= val;
+
+      }
+      else
+      {
+        MMU.CUR_RAM = (val & 0x3);
+      }
+    }
+   }
+   else if (((addr >= 0x6000) && (addr < 0x8000)))
+   {
+     if (MMU.MBC1)
+    {
+      // we're only interested in the first bit
+      val &= 1 ;
+      if (val == 1)
+      {
+        MMU.CUR_RAM = 0 ;
+        MMU.MEMORY_MODEL = 0;
+      }
+      else
+      {
+        MMU.MEMORY_MODEL = 1;
+      }
+    }
+   }
+ else if (((addr >= 0xA000) && (addr < 0xC000)))
+  {
+    if (MMU.ENABLE_RAM)
+ 		{
+ 		    if (MMU.MBC1)
+ 		    {
+            uint16_t newAddress = (addr - 0xA000);
+            MMU.ram[newAddress + (MMU.CUR_RAM * 0x2000)] = val;
+ 		    }
+ 		}
+ 		else if (MMU.MBC2 && (addr < 0xA200))
+ 		{
+ 		    uint16_t newAddress = (addr - 0xA000);
+        MMU.ram[newAddress + (MMU.CUR_RAM * 0x2000)] = val;
+ 		}
+  }
+  // we're right to internal RAM, remember that it needs to echo it
+	else if ((addr >= 0xC000) && (addr <= 0xDFFF))
+	{
+		MMU.memory[addr] = val;
+	}
+  else if ((addr >= 0xE000) && (addr < 0xFE00))
+  {
+    MMU.memory[addr] = val;
+    MMU.memory[addr - 0x2000] = val;
   }
 
   // Read only
-  if ((addr >= 0xFEA0) && (addr < 0xFEFF))
-    return;
+  else if ((addr >= 0xFEA0) && (addr <= 0xFEFF))
+  {
 
-  // Detect disable boot rom
-  if (addr == 0xFF50 && val == 1)
-  {
-    load_rom(MMU.path_rom);
-  }
-  else if (addr == 0xFF46)
-  {
-    uint16_t address = val << 8;
-    for (int i = 0 ; i < 0xA0; i++)
-    {
-      write_memory(0xFE00 + i, read_memory(address + i)) ;
-    }
-    return;
   }
   else if (addr == 0xFF04) // Divider register
   {
     MMU.memory[addr] = 0;
-    return;
+    my_clock.divider = 0;
+  }
+  else if (addr == 0xFF44) // Divider register
+  {
+    MMU.memory[addr] = 0;
   }
   else if (addr == 0xFF07) // TMC reg
   {
@@ -217,12 +262,19 @@ void write_memory(uint16_t addr, uint8_t val)
         case 3: my_clock.timer_counter = 256; break;
       }
     }
-    return;
   }
-
-  MMU.memory[addr] = val;
-  if ((addr >= 0xE000) && (addr < 0xFE00))
-    write_memory(addr - 0x2000, val);
+  else if (addr == 0xFF46)
+  {
+    uint16_t address = val << 8;
+    for (int i = 0 ; i < 0xA0; i++)
+    {
+      write_memory(0xFE00 + i, read_memory(address + i)) ;
+    }
+  }
+  else
+  {
+      MMU.memory[addr] = val;
+  }
 }
 
 void request_interupt(uint8_t val)
