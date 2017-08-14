@@ -35,5 +35,7 @@ void rl_op(uint8_t *reg);
 void rr_op(uint8_t *reg);
 void sbc_op(uint8_t *first, const uint8_t second);
 void sra_op(uint8_t *reg);
+void rlc_op(uint8_t *reg);
+void rrc_op(uint8_t *reg);
 
 #endif /* HELPERS_OP_H */

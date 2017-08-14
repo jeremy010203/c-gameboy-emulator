@@ -48,8 +48,8 @@ void inc_op(uint8_t *reg)
 {
   uint8_t result = *reg + 1;
 
-  result == 0 ? setZ() : resetZ();
-  (result & 0xF) == 0 ? setH() : resetH();
+  (result == 0) ? setZ() : resetZ();
+  ((result & 0xF) == 0) ? setH() : resetH();
   resetN();
 
   *reg = result;
@@ -60,10 +60,9 @@ void inc_op(uint8_t *reg)
 void dec_op(uint8_t *reg)
 {
   uint8_t result = *reg - 1;
-  //*reg == 0 ? setC() : resetC();
 
-  result == 0 ? setZ() : resetZ();
-  (result & 0xF) == 0xF ? setH() : resetH();
+  (result == 0) ? setZ() : resetZ();
+  ((result & 0xF) == 0xF) ? setH() : resetH();
   setN();
 
   *reg = result;
@@ -112,8 +111,8 @@ void swap_op(uint8_t *reg)
 void adc_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = *first + second + getC();
-  (((*first & 0xF) + (second & 0xF) + getC()) & 0x10) ? setH() : resetH();
-  (((uint16_t)*first + (uint16_t)second + (uint16_t)getC()) > 255) ? setC() : resetC();
+  (((*first & 0xF) + (second & 0xF) + getC()) > 0xF) ? setH() : resetH();
+  (((uint16_t)*first + (uint16_t)second + (uint16_t)getC()) > 0xFF) ? setC() : resetC();
 
   result == 0 ? setZ() : resetZ();
   resetN();
@@ -157,8 +156,8 @@ void sub_8_op(uint8_t *first, const uint8_t second)
 
   (result == 0) ? setZ() : resetZ();
 
-  int16_t testf = result & 0xF;
-  int16_t tests = *first & 0xF;
+  uint8_t testf = (result & 0xF);
+  uint8_t tests = (*first & 0xF);
   (testf > tests) ? setH() : resetH();
   setN();
 
@@ -170,7 +169,7 @@ void sub_8_op(uint8_t *first, const uint8_t second)
 void xor_8_op(uint8_t *first, const uint8_t second)
 {
   *first ^= second;
-  *first == 0 ? setZ() : resetZ();
+  (*first == 0) ? setZ() : resetZ();
   resetH();
   resetN();
   resetC();
@@ -182,7 +181,7 @@ void xor_8_op(uint8_t *first, const uint8_t second)
 void and_op(uint8_t *first, const uint8_t second)
 {
   *first &= second;
-  *first == 0 ? setZ() : resetZ();
+  (*first == 0) ? setZ() : resetZ();
   resetN();
   setH();
   resetC();
@@ -194,7 +193,7 @@ void and_op(uint8_t *first, const uint8_t second)
 void or_op(uint8_t *first, const uint8_t second)
 {
   *first |= second;
-  *first == 0 ? setZ() : resetZ();
+  (*first == 0) ? setZ() : resetZ();
   resetN();
   resetH();
   resetC();
@@ -267,9 +266,9 @@ void set_op(uint8_t *reg, const uint8_t pos)
 
 void sla_op(uint8_t *reg)
 {
-  *reg >> 7 ? setC() : resetC();
+  (*reg >> 7) ? setC() : resetC();
   *reg <<= 1;
-  *reg == 0 ? setZ() : resetZ();
+  (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
 
@@ -279,7 +278,7 @@ void sla_op(uint8_t *reg)
 
 void srl_op(uint8_t *reg)
 {
-  (*reg & 1) ? setC() : resetC();
+  ((*reg & 0x01) == 0x01) ? setC() : resetC();
   *reg >>= 1;
   (*reg == 0) ? setZ() : resetZ();
   resetN();
@@ -292,7 +291,7 @@ void srl_op(uint8_t *reg)
 void rl_op(uint8_t *reg)
 {
   uint8_t carry = (*reg > 0x7F);
-  *reg = ((*reg << 1) | getC());
+  *reg = (((*reg << 1) & 0xFF) | getC());
 
   carry ? setC() : resetC();
   (*reg == 0) ? setZ() : resetZ();
@@ -305,8 +304,8 @@ void rl_op(uint8_t *reg)
 
 void rr_op(uint8_t *reg)
 {
-  uint8_t old_0 = (*reg & 1);
-  *reg = ((*reg >> 1) | (getC() << 7));
+  uint8_t old_0 = ((*reg & 0x01) == 0x01);
+  *reg = ((getC() ? 0x80 : 0) | (*reg >> 1));
 
   old_0 ? setC() : resetC();
   (*reg == 0) ? setZ() : resetZ();
@@ -321,10 +320,10 @@ void sbc_op(uint8_t *first, const uint8_t second)
 {
   uint8_t result = (*first - second - getC());
 
-  int16_t testf = (*first & 0xF);
-  int16_t tests = (second & 0xF);
-  ((testf - tests - (int16_t)getC()) < 0) ? setH() : resetH();
-  ((int16_t)*first - (int16_t)second - (int16_t)getC() < 0) ? setC() : resetC();
+  uint16_t testf = (*first & 0xF);
+  uint16_t tests = (second & 0xF);
+  (testf < (tests + getC())) ? setH() : resetH();
+  (*first < (second + getC())) ? setC() : resetC();
 
   (result == 0) ? setZ() : resetZ();
   setN();
@@ -336,16 +335,37 @@ void sbc_op(uint8_t *first, const uint8_t second)
 
 void sra_op(uint8_t *reg)
 {
-  uint8_t old_0 = (*reg & 1);
-  uint8_t old_7 = (*reg >> 7);
-  old_0 ? setC() : resetC();
-
-  *reg >>= 1;
-  *reg |= (old_7 << 7);
+  ((*reg & 0x01) == 0x01) ? setC() : resetC();
+  *reg = ((*reg & 0x80) | (*reg >> 1));
 
   (*reg == 0) ? setZ() : resetZ();
   resetN();
   resetH();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void rlc_op(uint8_t *reg)
+{
+  (*reg > 0x7F) ? setC() : resetC();
+  *reg = (((*reg << 1) & 0xFF) | getC());
+  (*reg == 0) ? setZ() : resetZ();
+  resetH();
+  resetN();
+
+  my_clock.m = 2;
+  my_clock.t = 8;
+}
+
+void rrc_op(uint8_t *reg)
+{
+  ((*reg & 0x01) == 0x01) ? setC() : resetC();
+	*reg = ((getC() ? 0x80 : 0) | (*reg >> 1));
+
+  (*reg == 0) ? setZ() : resetZ();
+  resetH();
+  resetN();
 
   my_clock.m = 2;
   my_clock.t = 8;

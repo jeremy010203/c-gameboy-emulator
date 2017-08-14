@@ -172,12 +172,13 @@ void write_memory(uint16_t addr, uint8_t val)
    {
        DoChangeROMRAMMode(val);
    }
-  else if (((addr >= 0xA000) && (addr < 0xC000)) && MMU.ENABLE_RAM)
-   {
-       MMU.ram[(addr - 0xA000) + (MMU.CUR_RAM * 0x2000)] = val;
-   }
    return;
  }
+ else if (((addr >= 0xA000) && (addr < 0xC000)) && MMU.ENABLE_RAM)
+  {
+      MMU.ram[(addr - 0xA000) + (MMU.CUR_RAM * 0x2000)] = val;
+      return;
+  }
 
   // Read only
   if ((addr >= 0xFEA0) && (addr < 0xFEFF))
