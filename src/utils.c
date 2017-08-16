@@ -969,6 +969,7 @@ void opcode_0x27(void)
 }
 
 // HALT
+// TODO: Handle halt bug
 void opcode_0x76(void)
 {
   MMU.HALT = 1;
@@ -1853,7 +1854,6 @@ static void my_clock_handling(uint8_t pixels[], int *display)
   my_clock.total_t += my_clock.t;
   my_clock.lineticks += my_clock.m;
   update_timers();
-
 
   switch (my_clock.mode)
   {

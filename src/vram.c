@@ -52,6 +52,8 @@ void print_sprites(uint8_t pixels[])
 {
   uint8_t flags = MMU.memory[0xFF40];
   uint8_t double_sprite = test_bit(flags, 2);
+  uint8_t nb_sprites = 0;
+
   for (int i = 0; i < 40; i++)
   {
     int index = i * 4;
@@ -65,8 +67,9 @@ void print_sprites(uint8_t pixels[])
     int scanline = MMU.memory[0xFF44];
     int ysize = double_sprite ? 16 : 8;
 
-    if ((scanline >= yPos) && (scanline < (yPos + ysize)))
+    if ((scanline >= yPos) && (scanline < (yPos + ysize)) && nb_sprites < 10)
     {
+      nb_sprites++;
       int line = scanline - yPos;
       if (yFlip)
         line = -(line - ysize);
